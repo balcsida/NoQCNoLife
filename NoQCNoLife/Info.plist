@@ -30,5 +30,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>NoQCNoLife uses Bluetooth to connect with Bose QuietComfort 35 and SoundWear devices, enabling you to check battery levels and adjust noise cancelling settings directly from your Mac</string>
 </dict>
 </plist>
