@@ -29,6 +29,7 @@ class BmapPacket {
     private var e: Int8!
     private var f: Int8!
     private var g: Array<Int8>!
+    private var isValid: Bool = false
     
     enum FunctionBlockIds: Int8 {
         case PRODUCT_INFO,
@@ -95,44 +96,43 @@ class BmapPacket {
         }
     }
     
-    init(_ packet: inout [Int8]) {
+    init?(_ packet: inout [Int8]) {
         if (packet.count < 4) {
-            assert(false, "Failed to spawn BmapPacket: Invalid packet size.")
-            os_log("Failed to spawn BmapPacket: Invalid packet size.", type: .error)
-            return
+            os_log("Failed to spawn BmapPacket: Invalid packet size (%d bytes, minimum 4 required)", type: .error, packet.count)
+            return nil
         }
         
         self.a = packet
+        self.b = packet[0]
+        self.c = packet[1]
+        self.d = packet[2] >> 6
+        self.e = (packet[2] >> 4) & 0x3
+        self.f = packet[2] & 0xF
         
-        // self.b = Int(UInt8(bitPattern: bytes[0])) // bytes[0] & 0xFF
-        self.b = packet[0] // bytes[0] & 0xFF
+        let payloadLen: Int = Int(UInt8(bitPattern: Int8(packet[3])))
         
-        // self.c = Int(UInt8(bitPattern: bytes[1])) // bytes[1] & Int8(0xFF)
-        self.c = packet[1] // bytes[1] & Int8(0xFF)
-        
-        // self.d = Int(UInt8(bitPattern: bytes[2] >> 6)) // bytes[2] >> 6
-        self.d = packet[2] >> 6 // bytes[2] >> 6
-        
-        // self.e = Int(UInt8(bitPattern: (bytes[2] >> 4) & 0x3)) // bytes[2] >> 4 & 0x3;
-        self.e = (packet[2] >> 4) & 0x3 // bytes[2] >> 4 & 0x3;
-        
-        // self.f = Int(UInt8(bitPattern: bytes[2] & 0xF)) // bytes[2] & 0xF;
-        self.f = packet[2] & 0xF // bytes[2] & 0xF;
-        
-        let payloadLen: Int = Int(UInt8(bitPattern: Int8(packet[3])));
-        if (packet.count != 4 + payloadLen) {
-            assert(false, "Failed to spawn BmapPacket: Invalid payload.")
-            os_log("Failed to spawn BmapPacket: Invalid payload.", type: .error)
-            self.reset()
-            return
+        // Check if the payload length is reasonable
+        if payloadLen < 0 || payloadLen > 1024 {
+            os_log("Failed to spawn BmapPacket: Unreasonable payload length (%d)", type: .error, payloadLen)
+            return nil
         }
-        self.g = Array(packet[4..<(4 + payloadLen)])
         
-        // ios - SwiftでIntをUIntに（またはその逆に）ビットをキャスト
-        // https://stackoverrun.com/ja/q/7446927
-        // https://developer.apple.com/documentation/swift/uint8
-        //print(UInt8(bitPattern: Int8(-1))) // -> 255
-        //print(Int8(bitPattern: UInt8(0xff))) // -> -1
+        if (packet.count != 4 + payloadLen) {
+            os_log("Failed to spawn BmapPacket: Invalid payload. Expected %d bytes, got %d bytes", type: .error, 4 + payloadLen, packet.count)
+            #if DEBUG
+            print("Packet header: functionBlock=\(self.b), function=\(self.c), deviceId=\(self.d), port=\(self.e), operator=\(self.f), declaredPayloadLen=\(payloadLen)")
+            print("Raw packet: \(packet)")
+            #endif
+            return nil
+        }
+        
+        if payloadLen > 0 {
+            self.g = Array(packet[4..<(4 + payloadLen)])
+        } else {
+            self.g = []
+        }
+        
+        self.isValid = true
     }
     
     init(functionBlockId: BmapPacket.FunctionBlockIds, functionId: Int8, operatorId: BmapPacket.OperatorIds,
@@ -145,12 +145,12 @@ class BmapPacket {
         self.g = payload
         
         self.build()
+        self.isValid = true
     }
     
     func build() {
         if (self.b == nil || self.c == nil || self.d == nil || self.e == nil || self.f == nil || self.g == nil) {
-            assert(false, "Failed to build bmapPacket.")
-            os_log("Failed to build bmapPacket.", type: .error)
+            os_log("Failed to build bmapPacket - missing required fields", type: .error)
             self.reset()
             return
         }
@@ -162,12 +162,11 @@ class BmapPacket {
         self.a[3] = Int8(self.g.count)
         if (self.g.count > 0) {
             self.a.replaceSubrange(4...(self.a.count - 1), with: self.g)
-            // System.arraycopy(this.g, 0, this.a, 4, this.g.length);
         }
     }
     
     func getPacket() -> [Int8]? {
-        return self.a
+        return self.isValid ? self.a : nil
     }
     
     func getFunctionBlockId() -> BmapPacket.FunctionBlockIds? {
@@ -183,7 +182,7 @@ class BmapPacket {
     }
     
     func getPayload() ->  [Int8]? {
-        return self.g;
+        return self.g
     }
     
     func toString() -> String {
@@ -198,5 +197,6 @@ class BmapPacket {
         self.e = nil
         self.f = nil
         self.g = nil
+        self.isValid = false
     }
 }
