@@ -39,6 +39,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         bt = Bt(self)
         connectBtUserNotification = IOBluetoothDevice.register(forConnectNotifications: bt,
                                                                selector:#selector(bt.onNewConnectionDetected))
+        
+        // Check for already connected devices after notifications are set up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.bt.checkForConnectedDevices()
+        }
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {

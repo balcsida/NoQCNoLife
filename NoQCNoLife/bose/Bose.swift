@@ -18,6 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+import os.log
+
 class Bose {
     
     private static let VENDER_ID: Int = 158
@@ -191,11 +193,16 @@ class Bose {
     }
     
     static func parsePacket(packet: inout [Int8], eventHandler: EventHandler) {
-        let bmapPacket = BmapPacket(&packet)
-        guard let functionBlockId = bmapPacket.getFunctionBlockId() else {
-            assert(false, "Invalid function block id @ Bose::parsePacket()")
+        guard let bmapPacket = BmapPacket(&packet) else {
+            os_log("Failed to create BmapPacket from received data", type: .error)
             return
         }
+        
+        guard let functionBlockId = bmapPacket.getFunctionBlockId() else {
+            os_log("Invalid function block id in received packet", type: .error)
+            return
+        }
+        
         let functionBlock = FunctionBlockFactory.getFunctionBlockById(functionBlockId)
         functionBlock?.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
     }
@@ -233,4 +240,3 @@ class Bose {
         return StatusFunctionBlock.generateGetBatteryLevelPacket().getPacket()
     }
 }
-

@@ -21,31 +21,110 @@
 import IOBluetooth
 import os.log
 
+// Thread-safe wrapper for channel and device state
+private class ConnectionState {
+    private let queue = DispatchQueue(label: "com.noqcnolife.connectionState", attributes: .concurrent)
+    private var _channel: IOBluetoothRFCOMMChannel?
+    private var _device: IOBluetoothDevice?
+    private var _productId: Int?
+    
+    var channel: IOBluetoothRFCOMMChannel? {
+        get { queue.sync { _channel } }
+        set { queue.async(flags: .barrier) { self._channel = newValue } }
+    }
+    
+    var device: IOBluetoothDevice? {
+        get { queue.sync { _device } }
+        set { queue.async(flags: .barrier) { self._device = newValue } }
+    }
+    
+    var productId: Int? {
+        get { queue.sync { _productId } }
+        set { queue.async(flags: .barrier) { self._productId = newValue } }
+    }
+    
+    func reset() {
+        queue.async(flags: .barrier) {
+            self._channel = nil
+            self._device = nil
+            self._productId = nil
+        }
+    }
+    
+    func sendPacket(_ packet: [Int8]) -> IOReturn? {
+        return queue.sync {
+            guard let channel = _channel else { return nil }
+            
+            // Create a completely independent buffer for the packet
+            let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: packet.count)
+            defer { buffer.deallocate() }
+            
+            // Copy packet data to the buffer
+            for i in 0..<packet.count {
+                buffer[i] = packet[i]
+            }
+            
+            return channel.writeSync(buffer, length: UInt16(packet.count))
+        }
+    }
+}
+
 class Bt {
 
-    private var connectedChannel: IOBluetoothRFCOMMChannel?
-    private var connectedDevice: IOBluetoothDevice?
-    private var productId: Int?
-    
+    private let connectionState = ConnectionState()
     private var delegate: BluetoothDelegate
-    
     private var disconnectBtUserNotification: IOBluetoothUserNotification?
     
     init(_ delegate: BluetoothDelegate) {
-        self.connectedChannel = nil
-        self.connectedDevice = nil
-        self.productId = nil
         self.delegate = delegate
+        
+        // Check for already connected devices after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.checkForConnectedDevices()
+        }
+    }
+    
+    func checkForConnectedDevices() {
+        #if DEBUG
+        print("[BT]: Checking for already connected devices")
+        #endif
+        
+        if (connectionState.device != nil) {
+            return
+        }
+        
+        var device: IOBluetoothDevice!
+        var productId: Int!
+        
+        if (findConnectedBoseDevice(connectedDevice: &device, productId: &productId)) {
+            #if DEBUG
+            print("[BT]: Found already connected Bose device")
+            #endif
+            
+            var channel: IOBluetoothRFCOMMChannel!
+            if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
+                os_log("Failed to open rfcomm channel.", type: .error)
+                return
+            }
+            
+            // Set all connection state atomically
+            connectionState.device = device
+            connectionState.productId = productId
+            connectionState.channel = channel
+            
+            self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
+                                                               selector: #selector(Bt.onDisconnectDetected))
+        }
     }
     
     func closeConnection() {
-        let result: IOReturn? = self.connectedChannel?.close()
+        let channel = connectionState.channel
+        connectionState.reset()
+        
+        let result = channel?.close()
         if (result != nil && result != 0 ) {
-            assert(false, "Faild to close connection.")
+            assert(false, "Failed to close connection.")
         }
-        self.connectedChannel = nil
-        self.connectedDevice = nil
-        self.productId = nil
         
         self.disconnectBtUserNotification?.unregister()
     }
@@ -76,7 +155,7 @@ class Bt {
     }
     
     func getProductId() -> Int? {
-        return self.connectedDevice != nil ? self.productId : nil
+        return connectionState.productId
     }
     
     @objc func onDisconnectDetected() {
@@ -92,24 +171,33 @@ class Bt {
         #if DEBUG
         print("[BT]: NewConnectionDetected")
         #endif
-        if (self.connectedDevice != nil) {
+        if (connectionState.device != nil) {
             return
         }
         
-        if (!findConnectedBoseDevice(connectedDevice: &self.connectedDevice, productId: &self.productId)) {
+        var device: IOBluetoothDevice!
+        var productId: Int!
+        
+        if (!findConnectedBoseDevice(connectedDevice: &device, productId: &productId)) {
             #if DEBUG
             print("Connected bose device is not found.")
             #endif
             return
         }
         
-        if (!openConnection(connectedDevice: self.connectedDevice, rfcommChannel: &self.connectedChannel)) {
+        var channel: IOBluetoothRFCOMMChannel!
+        if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
             os_log("Failed to open rfcomm channel.", type: .error)
             return
         }
         
-        self.disconnectBtUserNotification = self.connectedDevice?.register(forDisconnectNotification: self,
-                                                                           selector: #selector(Bt.onDisconnectDetected))
+        // Set all connection state atomically
+        connectionState.device = device
+        connectionState.productId = productId
+        connectionState.channel = channel
+        
+        self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
+                                                           selector: #selector(Bt.onDisconnectDetected))
     }
     
     private func openConnection(connectedDevice: IOBluetoothDevice!, rfcommChannel: inout IOBluetoothRFCOMMChannel!) -> Bool {
@@ -164,42 +252,32 @@ class Bt {
     }
     
     func sendGetAnrModePacket () -> Bool {
-        guard var packet = Bose.generateGetAnrModePacket() else {
+        guard let packet = Bose.generateGetAnrModePacket() else {
             os_log("Failed to generate getAnrModePacket.", type: .error)
             return false
         }
-        return sendPacketSync(&packet)
+        return sendPacketSync(packet)
     }
     
     func sendGetBassControlPacket () -> Bool {
-        guard var packet = Bose.generateGetBassControlPacket() else {
+        guard let packet = Bose.generateGetBassControlPacket() else {
             os_log("Failed to generate getBassControlPacket.", type: .error)
             return false
         }
-        return sendPacketSync(&packet)
+        return sendPacketSync(packet)
     }
     
     func sendGetBatteryLevelPacket () -> Bool {
-        guard var packet = Bose.generateGetBatteryLevelPacket() else {
+        guard let packet = Bose.generateGetBatteryLevelPacket() else {
             os_log("Failed to generate getBatteryLevelPacket.", type: .error)
             return false
         }
-        return sendPacketSync(&packet)
+        return sendPacketSync(packet)
     }
     
-    /*func sendPacketAsync(_ packet: inout [Int8]) {
-        let result = self.connectedChannel?.writeAsync(&packet, length: UInt16(packet.count), refcon: &(self.delegate))
-        if (result != kIOReturnSuccess) {
-            os_log("Failed to send packet.", type: .error)
-        } else {
-            #if DEBUG
-            print("[Sent]: \(packet)")
-            #endif
-        }
-    }*/
-    
-    private func sendPacketSync(_ packet: inout [Int8]) -> Bool {
-        let result = self.connectedChannel?.writeSync(&packet, length: UInt16(packet.count))
+    private func sendPacketSync(_ packet: [Int8]) -> Bool {
+        let result = connectionState.sendPacket(packet)
+        
         if (result == nil || result != kIOReturnSuccess) {
             return false
         }
@@ -210,19 +288,19 @@ class Bt {
     }
     
     func sendSetGetAnrModePacket(_ anrMode: Bose.AnrMode) -> Bool {
-        guard var packet = Bose.generateSetGetAnrModePacket(anrMode) else {
+        guard let packet = Bose.generateSetGetAnrModePacket(anrMode) else {
             os_log("Failed to generate setGetAnrPacket.", type: .error)
             return false
         }
-        return sendPacketSync(&packet)
+        return sendPacketSync(packet)
     }
     
     func sendSetGetBassControlPacket(_ step: Int) -> Bool {
-        guard var packet = Bose.generateSetGetBassControlPacket(step) else {
+        guard let packet = Bose.generateSetGetBassControlPacket(step) else {
             os_log("Failed to generate setGetBassControl packet.", type: .error)
             return false
         }
-        return sendPacketSync(&packet)
+        return sendPacketSync(packet)
     }
 }
 
@@ -230,24 +308,72 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
     
     func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
 //        print("rfcommChannelClosed")
-        self.connectedChannel = nil
-        self.connectedDevice = nil
-        self.productId = nil
+        connectionState.reset()
     }
     
     func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
                            data dataPointer: UnsafeMutableRawPointer!,
                            length dataLength: Int) {
         //        print("rfcommChannelData")
-        var array = Array(UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength))
-        Bose.parsePacket(packet: &array, eventHandler: self.delegate)
+        
+        // Validate input parameters
+        guard dataPointer != nil, dataLength > 0 else {
+            os_log("Invalid data received: nil pointer or zero length", type: .error)
+            return
+        }
+        
+        // Additional safety check for reasonable data length
+        guard dataLength < 10000 else {
+            os_log("Received unusually large data packet: %d bytes", type: .error, dataLength)
+            return
+        }
+        
+        let buffer = UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength)
+        var array = Array(buffer)
+        
+        #if DEBUG
+        print("[Received]: \(array) (length: \(dataLength))")
+        #endif
+        
+        // Process multiple packets that might be in the same transmission
+        var offset = 0
+        while offset < array.count {
+            // Check if we have at least a header (4 bytes)
+            if offset + 4 > array.count {
+                break
+            }
+            
+            // Get the payload length from the 4th byte
+            let payloadLength = Int(UInt8(bitPattern: array[offset + 3]))
+            let packetLength = 4 + payloadLength
+            
+            // Check if we have a complete packet
+            if offset + packetLength > array.count {
+                os_log("Incomplete packet at offset %d, expected %d bytes but only %d remaining",
+                      type: .error, offset, packetLength, array.count - offset)
+                break
+            }
+            
+            // Extract single packet
+            var singlePacket = Array(array[offset..<(offset + packetLength)])
+            
+            #if DEBUG
+            print("[Processing packet]: \(singlePacket)")
+            #endif
+            
+            // Parse the single packet
+            Bose.parsePacket(packet: &singlePacket, eventHandler: self.delegate)
+            
+            // Move to next packet
+            offset += packetLength
+        }
     }
     
     func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
                                    status error: IOReturn) {
 //        print("rfcommChannelOpenComplete")
         // [重要] BmapVersionを取得しないと、一切データを送ってこない。
-        guard var packet = Bose.generateGetBmapVersionPacket() else {
+        guard let packet = Bose.generateGetBmapVersionPacket() else {
             assert(false, "Failed to generate getBmapVersionPacket @ Bt::rfcommChannelOpenComplete()")
             os_log("Failed to generate getBmapVersionPacket.", type: .error)
             self.closeConnection()
@@ -255,7 +381,7 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
             return
         }
         
-        if (self.sendPacketSync(&packet) == false) {
+        if (self.sendPacketSync(packet) == false) {
             self.closeConnection()
             self.delegate.bmapVersionEvent(nil)
         }
