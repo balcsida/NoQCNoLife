@@ -119,13 +119,16 @@ jobs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Try to update the Homebrew tap
-          # This requires a Personal Access Token with repo permissions
+          # This requires a Fine-grained Personal Access Token
           # Add it as HOMEBREW_TAP_TOKEN secret in repository settings
           
           if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
             echo "::warning title=Homebrew Tap Update::HOMEBREW_TAP_TOKEN secret not set. Manual update required."
             echo "To enable automatic updates:"
-            echo "1. Create a Personal Access Token with 'repo' permissions"
+            echo "1. Create a Fine-grained Personal Access Token:"
+            echo "   - Go to GitHub Settings → Developer settings → Fine-grained tokens"
+            echo "   - Select only 'balcsida/homebrew-tap' repository"
+            echo "   - Grant 'Contents: Read and Write' permission"
             echo "2. Add it as HOMEBREW_TAP_TOKEN secret in repository settings"
             echo ""
             echo "Manual update command:"

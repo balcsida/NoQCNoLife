@@ -62,12 +62,17 @@ The tap repository is located at: `github.com/balcsida/homebrew-tap`
 
 To enable automatic Homebrew tap updates:
 
-1. **Create a Personal Access Token**:
-   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Click "Generate new token (classic)"
+1. **Create a Fine-grained Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
+   - Click "Generate new token"
    - Give it a name like "Homebrew Tap Updater"
-   - Select the `repo` scope (full control of private repositories)
-   - Generate the token and copy it
+   - Set expiration (e.g., 90 days or custom)
+   - Under "Repository access", select "Selected repositories"
+   - Choose only `balcsida/homebrew-tap` repository
+   - Under "Permissions" → "Repository permissions", set:
+     - **Contents**: Read and Write (to update formula files)
+     - **Metadata**: Read (automatically selected)
+   - Click "Generate token" and copy it
 
 2. **Add the token as a repository secret**:
    - Go to your NoQCNoLife repository settings
