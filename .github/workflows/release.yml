@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build and Release DMG
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+          
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: Build Release
+        run: |
+          xcodebuild clean build \
+            -project NoQCNoLife.xcodeproj \
+            -scheme NoQCNoLife \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            PRODUCT_BUNDLE_IDENTIFIER="io.github.balcsida.NoQCNoLife"
+            
+      - name: Create DMG
+        run: |
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg_contents
+          
+          # Copy the app
+          cp -R "build/Build/Products/Release/NoQCNoLife.app" dmg_contents/
+          
+          # Create Applications symlink
+          ln -s /Applications dmg_contents/Applications
+          
+          # Create README file for DMG
+          cat > dmg_contents/README.txt << EOF
+          No QC, No Life
+          ==============
+          
+          To install:
+          1. Drag "NoQCNoLife.app" to the Applications folder
+          2. Launch from Applications
+          3. Grant Bluetooth permissions when prompted
+          
+          The app will appear in your menu bar.
+          
+          For more information, visit:
+          https://github.com/balcsida/NoQCNoLife
+          EOF
+          
+          # Create the DMG
+          hdiutil create -volname "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg"
+            
+      - name: Calculate checksums
+        id: checksums
+        run: |
+          shasum -a 256 "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg" > checksums.txt
+          echo "SHA256=$(shasum -a 256 NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## NoQCNoLife ${{ github.ref_name }}
+            
+            Control your Bose QuietComfort headphones from macOS.
+            
+            ### Installation
+            
+            #### Option 1: Download DMG
+            Download the DMG file below and drag NoQCNoLife.app to your Applications folder.
+            
+            #### Option 2: Homebrew
+            ```bash
+            brew tap balcsida/tap
+            brew install --cask noqcnolife
+            ```
+            
+            ### Checksums
+            SHA256: `${{ steps.checksums.outputs.SHA256 }}`
+            
+            ### Supported Devices
+            - Bose QuietComfort 35
+            - Bose QuietComfort 35 Series II
+            - Bose SoundWear Companion
+            
+            ### Requirements
+            - macOS 10.13 (High Sierra) or later
+            - Bluetooth enabled
+            
+          draft: false
+          prerelease: false
+          
+      - name: Upload DMG
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg
+          asset_name: NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg
+          asset_content_type: application/x-apple-diskimage
+          
+      - name: Upload Checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain
+          
+      - name: Update Homebrew Tap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Clone the tap repository
+          git clone https://github.com/balcsida/homebrew-tap.git tap-repo
+          cd tap-repo
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Update the formula
+          cat > Casks/noqcnolife.rb << EOF
+          cask "noqcnolife" do
+            version "${{ steps.get_version.outputs.VERSION }}"
+            sha256 "${{ steps.checksums.outputs.SHA256 }}"
+          
+            url "https://github.com/balcsida/NoQCNoLife/releases/download/v#{version}/NoQCNoLife-#{version}.dmg"
+            name "No QC, No Life"
+            desc "Control Bose QuietComfort headphones from macOS"
+            homepage "https://github.com/balcsida/NoQCNoLife"
+          
+            auto_updates false
+            depends_on macos: ">= :high_sierra"
+          
+            app "NoQCNoLife.app"
+          
+            uninstall quit: "io.github.balcsida.NoQCNoLife"
+          
+            zap trash: [
+              "~/Library/Preferences/io.github.balcsida.NoQCNoLife.plist",
+              "~/Library/Application Support/NoQCNoLife",
+            ]
+          end
+          EOF
+          
+          # Commit and push
+          git add Casks/noqcnolife.rb
+          git commit -m "Update NoQCNoLife to v${{ steps.get_version.outputs.VERSION }}"
+          git push

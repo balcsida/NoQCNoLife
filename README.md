@@ -34,6 +34,13 @@ macOS 10.13 (High Sierra) or later.
 
 ## Installation
 
+### Option 1: Homebrew (Recommended)
+```bash
+brew tap balcsida/tap
+brew install --cask noqcnolife
+```
+
+### Option 2: Direct Download
 Download the **.dmg** from the [latest release](https://github.com/balcsida/NoQCNoLife/releases/latest).
 
 ## Credits
