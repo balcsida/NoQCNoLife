@@ -211,6 +211,14 @@ class Bt {
         for pairedDevice in pairedDevices {
             let pairedDevice = pairedDevice as! IOBluetoothDevice
             
+            // Skip devices without valid addresses to avoid CoreBluetooth errors
+            guard pairedDevice.addressString != nil else {
+                #if DEBUG
+                print("[BT]: Skipping device with no address")
+                #endif
+                continue
+            }
+            
             NSLog("[NoQCNoLife-BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
             #if DEBUG
             print("[BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
