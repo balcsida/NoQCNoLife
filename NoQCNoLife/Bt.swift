@@ -91,13 +91,8 @@ class Bt {
         print("[BT]: Force reconnect requested")
         #endif
         
-        // Clear any existing connection
-        if connectionState.device != nil || connectionState.channel != nil {
-            #if DEBUG
-            print("[BT]: Clearing existing connection state")
-            #endif
-            self.closeConnection()
-        }
+        // Simply reset state and try to connect
+        connectionState.reset()
         
         // Wait a moment then try to connect
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -261,13 +256,16 @@ class Bt {
         self.closeConnection()
         self.delegate.onDisconnect()
         
-        // Try to reconnect after a short delay
+        // Commented out auto-reconnect to prevent potential issues
+        // User can reconnect by clicking the menu
+        /*
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             #if DEBUG
             print("[BT]: Attempting to reconnect after disconnect")
             #endif
             self?.checkForConnectedDevices()
         }
+        */
     }
     
     
@@ -313,7 +311,12 @@ class Bt {
     
     private func openConnection(connectedDevice: IOBluetoothDevice!, rfcommChannel: inout IOBluetoothRFCOMMChannel!) -> Bool {
         
-        assert(connectedDevice != nil, "connectedDevice == nil")
+        guard connectedDevice != nil else {
+            #if DEBUG
+            print("[BT]: ERROR - connectedDevice is nil in openConnection")
+            #endif
+            return false
+        }
         
         #if DEBUG
         print("[BT]: Opening RFCOMM connection to: \(connectedDevice.name ?? "Unknown")")
