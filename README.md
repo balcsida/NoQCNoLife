@@ -3,7 +3,7 @@
 This application lets you control the **Bose QuietComfort 35** from macOS.  
 It lives in your menu bar and allows you to check the battery level and adjust the noise-cancelling level.
 
-Originally created by **Shun Ito** in 2021, this project is now maintained by **Dávid Balatoni (balcsida)** as of 2025.
+Originally created by **Shun Ito** (@ll0s0ll) in 2021.
 
 QuietComfort 35 headphones have become indispensable to many users' daily lives.  
 While similar functions exist in the smartphone app, this Mac app provides convenient access to headphone controls directly from the menu bar.
@@ -38,8 +38,8 @@ Download the **.dmg** from the [latest release](https://github.com/ll0s0ll/NoQCN
 
 ## Credits
 
-**Original Author:** Shun Ito (2021)  
-**Current Maintainer:** Dávid Balatoni ([balcsida](https://github.com/balcsida)) (2025)
+**Original Author:** Shun Ito @ll0s0ll (2020-2021)  
+**Current Maintainer:** Dávid Balatoni @balcsida (2025)
 
 ## Disclaimer
 
