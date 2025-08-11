@@ -1,5 +1,7 @@
 # No QC, No Life
 
+![Screenshot when QuietComfort 35 II is connected](https://github.com/user-attachments/assets/d0f9c1ae-5379-41c8-b9e3-d3423c211c2a "Screenshot when QuietComfort 35 II is connected")
+
 This application lets you control the **Bose QuietComfort 35** from macOS.  
 It lives in your menu bar and allows you to check the battery level and adjust the noise-cancelling level.
 
@@ -12,8 +14,6 @@ The app has been tested on both QuietComfort 35 and QuietComfort 35 Series II.
 Other supported models are listed below.
 
 This is an unofficial project; we have not obtained permission from any of the relevant parties.
-
-![Screenshot when QuietComfort 35 is connected](https://ll0s0ll.github.io/no-qc-no-life/img/screenshot_qc35.png "Screenshot when QuietComfort 35 is connected")
 
 ## How to Use
 
@@ -34,7 +34,7 @@ macOS 10.13 (High Sierra) or later.
 
 ## Installation
 
-Download the **.dmg** from the [latest release](https://github.com/ll0s0ll/NoQCNoLife/releases/latest).
+Download the **.dmg** from the [latest release](https://github.com/balcsida/NoQCNoLife/releases/latest).
 
 ## Credits
 
