@@ -132,3 +132,45 @@ jobs:
           asset_path: ./checksums.txt
           asset_name: checksums.txt
           asset_content_type: text/plain
+          
+      - name: Update Homebrew Tap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Clone the tap repository
+          git clone https://github.com/balcsida/homebrew-tap.git tap-repo
+          cd tap-repo
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Update the formula
+          cat > Casks/noqcnolife.rb << EOF
+          cask "noqcnolife" do
+            version "${{ steps.get_version.outputs.VERSION }}"
+            sha256 "${{ steps.checksums.outputs.SHA256 }}"
+          
+            url "https://github.com/balcsida/NoQCNoLife/releases/download/v#{version}/NoQCNoLife-#{version}.dmg"
+            name "No QC, No Life"
+            desc "Control Bose QuietComfort headphones from macOS"
+            homepage "https://github.com/balcsida/NoQCNoLife"
+          
+            auto_updates false
+            depends_on macos: ">= :high_sierra"
+          
+            app "NoQCNoLife.app"
+          
+            uninstall quit: "io.github.balcsida.NoQCNoLife"
+          
+            zap trash: [
+              "~/Library/Preferences/io.github.balcsida.NoQCNoLife.plist",
+              "~/Library/Application Support/NoQCNoLife",
+            ]
+          end
+          EOF
+          
+          # Commit and push
+          git add Casks/noqcnolife.rb
+          git commit -m "Update NoQCNoLife to v${{ steps.get_version.outputs.VERSION }}"
+          git push

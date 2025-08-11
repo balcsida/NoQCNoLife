@@ -35,6 +35,7 @@ This document describes how to create a new release of NoQCNoLife.
    - Calculate checksums
    - Create a GitHub release
    - Upload the DMG and checksums
+   - Update the Homebrew tap formula
 
 ## Manual Release (Local)
 
@@ -51,17 +52,21 @@ This document describes how to create a new release of NoQCNoLife.
      NoQCNoLife-1.3.0.dmg
    ```
 
-## Update Homebrew Formula
+## Homebrew Formula
 
-### First Time Setup
+The Homebrew tap is **automatically updated** by GitHub Actions when you create a release.
 
-1. **Create the tap repository** (only needed once):
-   ```bash
-   ./scripts/setup-homebrew-tap.sh
-   ```
-   This will create a new repository at `github.com/balcsida/homebrew-tap`
+The tap repository is located at: `github.com/balcsida/homebrew-tap`
 
-### After Each Release
+Users can install NoQCNoLife via Homebrew:
+```bash
+brew tap balcsida/tap
+brew install --cask noqcnolife
+```
+
+### Manual Update (if needed)
+
+If you need to manually update the Homebrew formula:
 
 1. **Get the SHA256 from the release**:
    ```bash
@@ -72,7 +77,6 @@ This document describes how to create a new release of NoQCNoLife.
    ```bash
    ./scripts/update-homebrew-tap.sh 1.3.0 <sha256-hash>
    ```
-   This will automatically update and push to your tap repository
 
 ## Version Numbering
 
