@@ -25,7 +25,8 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2021 Shun Ito</string>
+	<string>Copyright © 2021 Shun Ito
+Maintained by Dávid Balatoni (balcsida) © 2025</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>

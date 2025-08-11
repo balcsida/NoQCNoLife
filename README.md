@@ -3,14 +3,15 @@
 This application lets you control the **Bose QuietComfort 35** from macOS.  
 It lives in your menu bar and allows you to check the battery level and adjust the noise-cancelling level.
 
-QuietComfort 35 headphones have become indispensable to my daily life.  
-While similar functions exist in the smartphone app, I spend most of my time using the headphones while connected to my Mac, so I built this app.
+Originally created by **Shun Ito** in 2021, this project is now maintained by **Dávid Balatoni (balcsida)** as of 2025.
 
-The app has been tested on the QuietComfort 35.  
-It will probably work on the QuietComfort 35 Series II, but I can’t guarantee it.  
-Other models are not supported.
+QuietComfort 35 headphones have become indispensable to many users' daily lives.  
+While similar functions exist in the smartphone app, this Mac app provides convenient access to headphone controls directly from the menu bar.
 
-This is an unofficial project; I have not obtained permission from any of the relevant parties—sorry!
+The app has been tested on both QuietComfort 35 and QuietComfort 35 Series II.  
+Other supported models are listed below.
+
+This is an unofficial project; we have not obtained permission from any of the relevant parties.
 
 ![Screenshot when QuietComfort 35 is connected](https://ll0s0ll.github.io/no-qc-no-life/img/screenshot_qc35.png "Screenshot when QuietComfort 35 is connected")
 
@@ -23,8 +24,9 @@ This is an unofficial project; I have not obtained permission from any of the re
 
 ## Supported Devices
 
-- QuietComfort 35  
-- SoundWear
+- Bose QuietComfort 35  
+- Bose QuietComfort 35 Series II
+- Bose SoundWear Companion
 
 ## System Requirements
 
@@ -34,6 +36,11 @@ macOS 10.13 (High Sierra) or later.
 
 Download the **.dmg** from the [latest release](https://github.com/ll0s0ll/NoQCNoLife/releases/latest).
 
+## Credits
+
+**Original Author:** Shun Ito (2021)  
+**Current Maintainer:** Dávid Balatoni ([balcsida](https://github.com/balcsida)) (2025)
+
 ## Disclaimer
 
-I accept no responsibility for any physical damage, data loss, financial loss, or any other harm resulting from the use of this software.
+We accept no responsibility for any physical damage, data loss, financial loss, or any other harm resulting from the use of this software.

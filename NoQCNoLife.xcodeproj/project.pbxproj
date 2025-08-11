@@ -11,6 +11,7 @@
 		847A51F025804723002DEF2D /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 847A51EE25804723002DEF2D /* MainMenu.xib */; };
 		847A51FA25804931002DEF2D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 847A51F825804931002DEF2D /* LICENSE */; };
 		847A51FB25804931002DEF2D /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 847A51F925804931002DEF2D /* README.md */; };
+		847A51FC25804932002DEF2D /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 847A51FC25804931002DEF2D /* Credits.rtf */; };
 		847A520125804998002DEF2D /* Bt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A51FD25804998002DEF2D /* Bt.swift */; };
 		847A520225804998002DEF2D /* StatusItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A51FE25804998002DEF2D /* StatusItem.swift */; };
 		847A5205258049F6002DEF2D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A5204258049F5002DEF2D /* AppDelegate.swift */; };
@@ -34,6 +35,7 @@
 		847A51F225804723002DEF2D /* NoQCNoLife.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NoQCNoLife.entitlements; sourceTree = "<group>"; };
 		847A51F825804931002DEF2D /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		847A51F925804931002DEF2D /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		847A51FC25804931002DEF2D /* Credits.rtf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.rtf; path = Credits.rtf; sourceTree = "<group>"; };
 		847A51FD25804998002DEF2D /* Bt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bt.swift; sourceTree = "<group>"; };
 		847A51FE25804998002DEF2D /* StatusItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusItem.swift; sourceTree = "<group>"; };
 		847A5204258049F5002DEF2D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; wrapsLines = 0; };
@@ -65,6 +67,7 @@
 			children = (
 				847A51F825804931002DEF2D /* LICENSE */,
 				847A51F925804931002DEF2D /* README.md */,
+				847A51FC25804931002DEF2D /* Credits.rtf */,
 				847A51E92580471F002DEF2D /* NoQCNoLife */,
 				847A51E82580471F002DEF2D /* Products */,
 			);
@@ -184,6 +187,7 @@
 				847A51FA25804931002DEF2D /* LICENSE in Resources */,
 				847A51ED25804723002DEF2D /* Assets.xcassets in Resources */,
 				847A51FB25804931002DEF2D /* README.md in Resources */,
+				847A51FC25804932002DEF2D /* Credits.rtf in Resources */,
 				847A51F025804723002DEF2D /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
