@@ -41,7 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                                                selector:#selector(bt.onNewConnectionDetected))
         
         // Check for already connected devices after notifications are set up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.bt.checkForConnectedDevices()
         }
     }
@@ -121,6 +121,19 @@ extension AppDelegate: StatusItemDelegate {
     }
     
     func menuWillOpen(_ menu: NSMenu) {
+        // First check if we need to connect to a device
+        if self.bt.getProductId() == nil {
+            self.bt.checkForConnectedDevices()
+            // Give it a moment to connect
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.updateMenuItems(menu)
+            }
+        } else {
+            updateMenuItems(menu)
+        }
+    }
+    
+    private func updateMenuItems(_ menu: NSMenu) {
         for menuItem in menu.items {
             switch menuItem.tag {
             case StatusItem.MenuItemTags.BATTERY_LEVEL.rawValue:
