@@ -107,20 +107,34 @@ class StatusItem {
     
     func setBassControlStep(_ step: Int?) {
         let tag = StatusItem.MenuItemTags.BASS_CONTROL.rawValue
-        let menuItem = self.statusItem.menu?.item(withTag: tag) as! BassControlMenuItem
+        guard let menuItem = self.statusItem.menu?.item(withTag: tag) as? BassControlMenuItem else {
+            #if DEBUG
+            print("[StatusItem]: Bass control menu item not found, skipping update")
+            #endif
+            return
+        }
         menuItem.setBassControlStep(step)
-        
     }
     
     func setBatteryLevel(_ level: Int?) {
         let tag = StatusItem.MenuItemTags.BATTERY_LEVEL.rawValue
-        let menuItem = self.statusItem.menu?.item(withTag: tag) as! BatteryLevelMenuItem
+        guard let menuItem = self.statusItem.menu?.item(withTag: tag) as? BatteryLevelMenuItem else {
+            #if DEBUG
+            print("[StatusItem]: Battery menu item not found, skipping update")
+            #endif
+            return
+        }
         menuItem.setBatteryLevel(level)
     }
     
     func setNoiseCancelMode(_ mode: Bose.AnrMode?) {
         let tag: Int = StatusItem.MenuItemTags.NOISE_CANCEL_MODE.rawValue
-        let menuItem = self.statusItem.menu?.item(withTag: tag) as! NoiseCancelModeMenuItem
+        guard let menuItem = self.statusItem.menu?.item(withTag: tag) as? NoiseCancelModeMenuItem else {
+            #if DEBUG
+            print("[StatusItem]: Noise cancel menu item not found, skipping update")
+            #endif
+            return
+        }
         menuItem.setNoiseCancelMode(mode)
     }
 }
