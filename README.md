@@ -3,7 +3,7 @@
 ![Screenshot when QuietComfort 35 II is connected](https://github.com/user-attachments/assets/d0f9c1ae-5379-41c8-b9e3-d3423c211c2a "Screenshot when QuietComfort 35 II is connected")
 
 This application lets you control the **Bose QuietComfort 35** from macOS.  
-It lives in your menu bar and allows you to check the battery level and adjust the noise-cancelling level.
+It lives in your menu bar and allows you to check the battery level and adjust the noise cancellation level.
 
 Originally created by **Shun Ito** (@ll0s0ll) in 2021.
 
