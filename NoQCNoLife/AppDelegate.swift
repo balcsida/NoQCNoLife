@@ -35,13 +35,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Insert code here to initialize your application
-//        print("applicationDidFinishLaunching()")
+        NSLog("[NoQCNoLife]: Application did finish launching")
+        print("applicationDidFinishLaunching()")
+        
         bt = Bt(self)
         connectBtUserNotification = IOBluetoothDevice.register(forConnectNotifications: bt,
                                                                selector:#selector(bt.onNewConnectionDetected))
         
+        NSLog("[NoQCNoLife]: Registered for Bluetooth notifications")
+        
         // Check for already connected devices after notifications are set up
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            NSLog("[NoQCNoLife]: Checking for connected devices on startup")
             self?.bt.checkForConnectedDevices()
         }
     }
@@ -121,6 +126,9 @@ extension AppDelegate: StatusItemDelegate {
     }
     
     func menuWillOpen(_ menu: NSMenu) {
+        NSLog("[NoQCNoLife]: Menu will open, checking connection")
+        NSLog("[NoQCNoLife]: Current product ID: \(self.bt.getProductId() ?? 0)")
+        
         #if DEBUG
         print("[AppDelegate]: Menu will open, checking connection")
         print("[AppDelegate]: Current product ID: \(self.bt.getProductId() ?? 0)")

@@ -101,6 +101,9 @@ class Bt {
     }
     
     func checkForConnectedDevices() {
+        NSLog("[NoQCNoLife-BT]: Checking for already connected devices")
+        NSLog("[NoQCNoLife-BT]: Current state - isConnecting: \(connectionState.isConnecting), device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
+        
         #if DEBUG
         print("[BT]: Checking for already connected devices")
         print("[BT]: Current state - isConnecting: \(connectionState.isConnecting), device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
@@ -188,12 +191,14 @@ class Bt {
     
     private func findConnectedBoseDevice(connectedDevice: inout IOBluetoothDevice!, productId: inout Int!) -> Bool {
         guard let pairedDevices = IOBluetoothDevice.pairedDevices() else {
+            NSLog("[NoQCNoLife-BT]: No paired devices found")
             #if DEBUG
             print("[BT]: No paired devices found")
             #endif
             return false
         }
         
+        NSLog("[NoQCNoLife-BT]: Found \(pairedDevices.count) paired devices")
         #if DEBUG
         print("[BT]: Found \(pairedDevices.count) paired devices")
         #endif
@@ -201,11 +206,13 @@ class Bt {
         for pairedDevice in pairedDevices {
             let pairedDevice = pairedDevice as! IOBluetoothDevice
             
+            NSLog("[NoQCNoLife-BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
             #if DEBUG
             print("[BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
             #endif
             
             if (!pairedDevice.isConnected()) {
+                NSLog("[NoQCNoLife-BT]:   - Device not connected")
                 #if DEBUG
                 print("[BT]:   - Not connected")
                 #endif
