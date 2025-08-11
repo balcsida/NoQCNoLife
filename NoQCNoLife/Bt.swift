@@ -489,7 +489,7 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         }
         
         let buffer = UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength)
-        var array = Array(buffer)
+        let array = Array(buffer)
         
         #if DEBUG
         print("[Received]: \(array) (length: \(dataLength))")
