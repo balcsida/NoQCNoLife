@@ -86,15 +86,51 @@ class Bt {
         self.delegate = delegate
     }
     
+    func forceReconnect() {
+        #if DEBUG
+        print("[BT]: Force reconnect requested")
+        #endif
+        
+        // Clear any existing connection
+        if connectionState.device != nil || connectionState.channel != nil {
+            #if DEBUG
+            print("[BT]: Clearing existing connection state")
+            #endif
+            self.closeConnection()
+        }
+        
+        // Wait a moment then try to connect
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.checkForConnectedDevices()
+        }
+    }
+    
     func checkForConnectedDevices() {
         #if DEBUG
         print("[BT]: Checking for already connected devices")
+        print("[BT]: Current state - isConnecting: \(connectionState.isConnecting), device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
         #endif
         
         // Prevent multiple simultaneous connection attempts
-        if connectionState.isConnecting || connectionState.device != nil {
+        if connectionState.isConnecting {
             #if DEBUG
-            print("[BT]: Already connecting or already connected, skipping check")
+            print("[BT]: Already connecting, skipping check")
+            #endif
+            return
+        }
+        
+        // If we think we're connected but don't have a channel, reset and try again
+        if connectionState.device != nil && connectionState.channel == nil {
+            #if DEBUG
+            print("[BT]: Have device but no channel, resetting connection state")
+            #endif
+            connectionState.reset()
+        }
+        
+        // If already connected with a valid channel, skip
+        if connectionState.device != nil && connectionState.channel != nil {
+            #if DEBUG
+            print("[BT]: Already connected with valid channel, skipping check")
             #endif
             return
         }
@@ -113,7 +149,7 @@ class Bt {
             if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
                 os_log("Failed to open rfcomm channel.", type: .error)
                 #if DEBUG
-                print("[BT]: Failed to open RFCOMM channel")
+                print("[BT]: Failed to open RFCOMM channel for device: \(device.name ?? "Unknown")")
                 #endif
                 connectionState.isConnecting = false
                 return
@@ -145,7 +181,11 @@ class Bt {
         
         let result = channel?.close()
         if (result != nil && result != 0 ) {
-            assert(false, "Failed to close connection.")
+            #if DEBUG
+            print("[BT]: Warning - Failed to close connection, result: \(result!)")
+            #endif
+            // Don't assert in production, just log the error
+            os_log("Failed to close connection, result: %d", type: .error, result!)
         }
         
         self.disconnectBtUserNotification?.unregister()
@@ -216,9 +256,18 @@ class Bt {
     @objc func onDisconnectDetected() {
         #if DEBUG
         print("[BT]: DisconnectDetected")
+        print("[BT]: Cleaning up connection state")
         #endif
         self.closeConnection()
         self.delegate.onDisconnect()
+        
+        // Try to reconnect after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            #if DEBUG
+            print("[BT]: Attempting to reconnect after disconnect")
+            #endif
+            self?.checkForConnectedDevices()
+        }
     }
     
     
@@ -266,22 +315,44 @@ class Bt {
         
         assert(connectedDevice != nil, "connectedDevice == nil")
         
+        #if DEBUG
+        print("[BT]: Opening RFCOMM connection to: \(connectedDevice.name ?? "Unknown")")
+        #endif
+        
         var rfcommChannelId: BluetoothRFCOMMChannelID = 0
         
         let serialPortServiceRecode = connectedDevice.getServiceRecord(for: IOBluetoothSDPUUID(uuid16: 0x1101))
         if (serialPortServiceRecode == nil) {
+            #if DEBUG
+            print("[BT]: ERROR - No serial port service record found")
+            #endif
             return false
         }
         
         if (serialPortServiceRecode!.getRFCOMMChannelID(&rfcommChannelId) != kIOReturnSuccess) {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to get RFCOMM channel ID")
+            #endif
             return false
         }
         
-        if (connectedDevice.openRFCOMMChannelSync(&rfcommChannel,
+        #if DEBUG
+        print("[BT]: Got RFCOMM channel ID: \(rfcommChannelId)")
+        #endif
+        
+        let result = connectedDevice.openRFCOMMChannelSync(&rfcommChannel,
                                                   withChannelID: rfcommChannelId,
-                                                  delegate: self) != kIOReturnSuccess) {
+                                                  delegate: self)
+        if (result != kIOReturnSuccess) {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to open RFCOMM channel, result: \(result)")
+            #endif
             return false
         }
+        
+        #if DEBUG
+        print("[BT]: Successfully opened RFCOMM channel")
+        #endif
         
         return true
     }

@@ -121,15 +121,17 @@ extension AppDelegate: StatusItemDelegate {
     }
     
     func menuWillOpen(_ menu: NSMenu) {
-        // First check if we need to connect to a device
-        if self.bt.getProductId() == nil {
-            self.bt.checkForConnectedDevices()
-            // Give it a moment to connect
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.updateMenuItems(menu)
-            }
-        } else {
-            updateMenuItems(menu)
+        #if DEBUG
+        print("[AppDelegate]: Menu will open, checking connection")
+        print("[AppDelegate]: Current product ID: \(self.bt.getProductId() ?? 0)")
+        #endif
+        
+        // Always try to check for connected devices when menu opens
+        self.bt.checkForConnectedDevices()
+        
+        // Update menu items after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.updateMenuItems(menu)
         }
     }
     
