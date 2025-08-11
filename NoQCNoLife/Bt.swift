@@ -159,12 +159,17 @@ class Bt {
             connectionState.channel = channel
             connectionState.isConnecting = false
             
+            NSLog("[NoQCNoLife-BT]: Successfully opened RFCOMM channel, notifying delegate")
             #if DEBUG
             print("[BT]: Successfully opened RFCOMM channel")
             #endif
             
             self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                                selector: #selector(Bt.onDisconnectDetected))
+            
+            // IMPORTANT: Notify the delegate that we're connected
+            // This triggers the UI update
+            self.delegate.onConnect()
         } else {
             #if DEBUG
             print("[BT]: No connected Bose device found")
@@ -450,8 +455,20 @@ class Bt {
 extension Bt: IOBluetoothRFCOMMChannelDelegate {
     
     func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
-//        print("rfcommChannelClosed")
+        NSLog("[NoQCNoLife-BT]: RFCOMM channel closed")
+        #if DEBUG
+        print("[BT]: rfcommChannelClosed")
+        #endif
+        
+        // Reset connection state
         connectionState.reset()
+        
+        // Notify delegate that we're disconnected
+        self.delegate.onDisconnect()
+        
+        // Also unregister the disconnect notification if it exists
+        self.disconnectBtUserNotification?.unregister()
+        self.disconnectBtUserNotification = nil
     }
     
     func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,

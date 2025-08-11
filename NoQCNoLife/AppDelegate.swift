@@ -134,6 +134,16 @@ extension AppDelegate: StatusItemDelegate {
         print("[AppDelegate]: Current product ID: \(self.bt.getProductId() ?? 0)")
         #endif
         
+        // If we have a product ID but the UI doesn't show it, update the UI
+        if let productId = self.bt.getProductId(), productId > 0 {
+            if !self.statusItem.isConnected() {
+                NSLog("[NoQCNoLife]: Device connected but UI not updated, forcing update")
+                if let product = Bose.Products.getById(productId) {
+                    self.statusItem.connected(product)
+                }
+            }
+        }
+        
         // Always try to check for connected devices when menu opens
         self.bt.checkForConnectedDevices()
         
