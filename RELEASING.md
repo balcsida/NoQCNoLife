@@ -54,9 +54,30 @@ This document describes how to create a new release of NoQCNoLife.
 
 ## Homebrew Formula
 
-The Homebrew tap is **automatically updated** by GitHub Actions when you create a release.
+The Homebrew tap can be **automatically updated** by GitHub Actions when you create a release.
 
 The tap repository is located at: `github.com/balcsida/homebrew-tap`
+
+### Enabling Automatic Updates
+
+To enable automatic Homebrew tap updates:
+
+1. **Create a Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Give it a name like "Homebrew Tap Updater"
+   - Select the `repo` scope (full control of private repositories)
+   - Generate the token and copy it
+
+2. **Add the token as a repository secret**:
+   - Go to your NoQCNoLife repository settings
+   - Navigate to Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `HOMEBREW_TAP_TOKEN`
+   - Value: Paste your Personal Access Token
+   - Click "Add secret"
+
+Once configured, the GitHub Action will automatically update the Homebrew tap after each release.
 
 Users can install NoQCNoLife via Homebrew:
 ```bash
