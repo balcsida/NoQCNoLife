@@ -75,8 +75,29 @@ extension AppDelegate: BluetoothDelegate {
         #endif
         self.statusItem.connected(product)
         
+        // Don't automatically set ANR mode on connection - it interrupts the device
+        // and causes a "boop" sound. Users can manually set it if needed.
+        // The device will maintain its last setting anyway.
+        /*
         if let lastSelectedAnrMode = PreferenceManager.getLastSelectedAnrMode(product) {
             if (!self.bt.sendSetGetAnrModePacket(lastSelectedAnrMode)) {
+                self.noiseCancelModeChanged(nil)
+            }
+        }
+        */
+        
+        // Request battery level and noise cancellation mode after a short delay
+        // This gives the device time to stabilize after connection
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            
+            // Get battery level
+            if (!self.bt.sendGetBatteryLevelPacket()) {
+                self.batteryLevelStatus(nil)
+            }
+            
+            // Get current noise cancellation mode (just to display, not to set)
+            if (!self.bt.sendGetAnrModePacket()) {
                 self.noiseCancelModeChanged(nil)
             }
         }
