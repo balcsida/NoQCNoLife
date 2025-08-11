@@ -27,6 +27,7 @@ private class ConnectionState {
     private var _channel: IOBluetoothRFCOMMChannel?
     private var _device: IOBluetoothDevice?
     private var _productId: Int?
+    private var _isConnecting: Bool = false
     
     var channel: IOBluetoothRFCOMMChannel? {
         get { queue.sync { _channel } }
@@ -43,11 +44,17 @@ private class ConnectionState {
         set { queue.async(flags: .barrier) { self._productId = newValue } }
     }
     
+    var isConnecting: Bool {
+        get { queue.sync { _isConnecting } }
+        set { queue.async(flags: .barrier) { self._isConnecting = newValue } }
+    }
+    
     func reset() {
         queue.async(flags: .barrier) {
             self._channel = nil
             self._device = nil
             self._productId = nil
+            self._isConnecting = false
         }
     }
     
@@ -77,33 +84,72 @@ class Bt {
     
     init(_ delegate: BluetoothDelegate) {
         self.delegate = delegate
+    }
+    
+    func forceReconnect() {
+        #if DEBUG
+        print("[BT]: Force reconnect requested")
+        #endif
         
-        // Check for already connected devices after a short delay
+        // Simply reset state and try to connect
+        connectionState.reset()
+        
+        // Wait a moment then try to connect
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.checkForConnectedDevices()
         }
     }
     
     func checkForConnectedDevices() {
+        NSLog("[NoQCNoLife-BT]: Checking for already connected devices")
+        NSLog("[NoQCNoLife-BT]: Current state - isConnecting: \(connectionState.isConnecting), device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
+        
         #if DEBUG
         print("[BT]: Checking for already connected devices")
+        print("[BT]: Current state - isConnecting: \(connectionState.isConnecting), device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
         #endif
         
-        if (connectionState.device != nil) {
+        // Prevent multiple simultaneous connection attempts
+        if connectionState.isConnecting {
+            #if DEBUG
+            print("[BT]: Already connecting, skipping check")
+            #endif
             return
         }
+        
+        // If we think we're connected but don't have a channel, reset and try again
+        if connectionState.device != nil && connectionState.channel == nil {
+            #if DEBUG
+            print("[BT]: Have device but no channel, resetting connection state")
+            #endif
+            connectionState.reset()
+        }
+        
+        // If already connected with a valid channel, skip
+        if connectionState.device != nil && connectionState.channel != nil {
+            #if DEBUG
+            print("[BT]: Already connected with valid channel, skipping check")
+            #endif
+            return
+        }
+        
+        connectionState.isConnecting = true
         
         var device: IOBluetoothDevice!
         var productId: Int!
         
         if (findConnectedBoseDevice(connectedDevice: &device, productId: &productId)) {
             #if DEBUG
-            print("[BT]: Found already connected Bose device")
+            print("[BT]: Found already connected Bose device with product ID: \(productId ?? 0)")
             #endif
             
             var channel: IOBluetoothRFCOMMChannel!
             if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
                 os_log("Failed to open rfcomm channel.", type: .error)
+                #if DEBUG
+                print("[BT]: Failed to open RFCOMM channel for device: \(device.name ?? "Unknown")")
+                #endif
+                connectionState.isConnecting = false
                 return
             }
             
@@ -111,9 +157,24 @@ class Bt {
             connectionState.device = device
             connectionState.productId = productId
             connectionState.channel = channel
+            connectionState.isConnecting = false
+            
+            NSLog("[NoQCNoLife-BT]: Successfully opened RFCOMM channel, notifying delegate")
+            #if DEBUG
+            print("[BT]: Successfully opened RFCOMM channel")
+            #endif
             
             self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                                selector: #selector(Bt.onDisconnectDetected))
+            
+            // IMPORTANT: Notify the delegate that we're connected
+            // This triggers the UI update
+            self.delegate.onConnect()
+        } else {
+            #if DEBUG
+            print("[BT]: No connected Bose device found")
+            #endif
+            connectionState.isConnecting = false
         }
     }
     
@@ -123,7 +184,11 @@ class Bt {
         
         let result = channel?.close()
         if (result != nil && result != 0 ) {
-            assert(false, "Failed to close connection.")
+            #if DEBUG
+            print("[BT]: Warning - Failed to close connection, result: \(result!)")
+            #endif
+            // Don't assert in production, just log the error
+            os_log("Failed to close connection, result: %d", type: .error, result!)
         }
         
         self.disconnectBtUserNotification?.unregister()
@@ -131,23 +196,68 @@ class Bt {
     
     private func findConnectedBoseDevice(connectedDevice: inout IOBluetoothDevice!, productId: inout Int!) -> Bool {
         guard let pairedDevices = IOBluetoothDevice.pairedDevices() else {
+            NSLog("[NoQCNoLife-BT]: No paired devices found")
+            #if DEBUG
+            print("[BT]: No paired devices found")
+            #endif
             return false
         }
         
+        NSLog("[NoQCNoLife-BT]: Found \(pairedDevices.count) paired devices")
+        #if DEBUG
+        print("[BT]: Found \(pairedDevices.count) paired devices")
+        #endif
+        
         for pairedDevice in pairedDevices {
             let pairedDevice = pairedDevice as! IOBluetoothDevice
-            if (!pairedDevice.isConnected()) {
+            
+            // Skip devices without valid addresses to avoid CoreBluetooth errors
+            guard pairedDevice.addressString != nil else {
+                #if DEBUG
+                print("[BT]: Skipping device with no address")
+                #endif
                 continue
             }
+            
+            NSLog("[NoQCNoLife-BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
+            #if DEBUG
+            print("[BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
+            #endif
+            
+            if (!pairedDevice.isConnected()) {
+                NSLog("[NoQCNoLife-BT]:   - Device not connected")
+                #if DEBUG
+                print("[BT]:   - Not connected")
+                #endif
+                continue
+            }
+            
+            #if DEBUG
+            print("[BT]:   - Is connected, checking PnP info")
+            #endif
             
             guard let pnpInfo = processPnPInfomation(pairedDevice) else {
+                #if DEBUG
+                print("[BT]:   - No PnP info available")
+                #endif
                 continue
             }
             
+            #if DEBUG
+            print("[BT]:   - Vendor ID: \(pnpInfo.venderId), Product ID: \(pnpInfo.productId)")
+            #endif
+            
             if (Bose.isSupportedBoseProduct(venderId: pnpInfo.venderId, productId: pnpInfo.productId)) {
+                #if DEBUG
+                print("[BT]:   - This is a supported Bose product!")
+                #endif
                 connectedDevice = pairedDevice
                 productId = pnpInfo.productId
                 return true
+            } else {
+                #if DEBUG
+                print("[BT]:   - Not a supported Bose product")
+                #endif
             }
         }
         
@@ -161,9 +271,21 @@ class Bt {
     @objc func onDisconnectDetected() {
         #if DEBUG
         print("[BT]: DisconnectDetected")
+        print("[BT]: Cleaning up connection state")
         #endif
         self.closeConnection()
         self.delegate.onDisconnect()
+        
+        // Commented out auto-reconnect to prevent potential issues
+        // User can reconnect by clicking the menu
+        /*
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            #if DEBUG
+            print("[BT]: Attempting to reconnect after disconnect")
+            #endif
+            self?.checkForConnectedDevices()
+        }
+        */
     }
     
     
@@ -171,9 +293,13 @@ class Bt {
         #if DEBUG
         print("[BT]: NewConnectionDetected")
         #endif
-        if (connectionState.device != nil) {
+        
+        // Prevent multiple simultaneous connection attempts
+        if connectionState.isConnecting || connectionState.device != nil {
             return
         }
+        
+        connectionState.isConnecting = true
         
         var device: IOBluetoothDevice!
         var productId: Int!
@@ -182,12 +308,14 @@ class Bt {
             #if DEBUG
             print("Connected bose device is not found.")
             #endif
+            connectionState.isConnecting = false
             return
         }
         
         var channel: IOBluetoothRFCOMMChannel!
         if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
             os_log("Failed to open rfcomm channel.", type: .error)
+            connectionState.isConnecting = false
             return
         }
         
@@ -195,6 +323,7 @@ class Bt {
         connectionState.device = device
         connectionState.productId = productId
         connectionState.channel = channel
+        connectionState.isConnecting = false
         
         self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                            selector: #selector(Bt.onDisconnectDetected))
@@ -202,24 +331,51 @@ class Bt {
     
     private func openConnection(connectedDevice: IOBluetoothDevice!, rfcommChannel: inout IOBluetoothRFCOMMChannel!) -> Bool {
         
-        assert(connectedDevice != nil, "connectedDevice == nil")
+        guard connectedDevice != nil else {
+            #if DEBUG
+            print("[BT]: ERROR - connectedDevice is nil in openConnection")
+            #endif
+            return false
+        }
+        
+        #if DEBUG
+        print("[BT]: Opening RFCOMM connection to: \(connectedDevice.name ?? "Unknown")")
+        #endif
         
         var rfcommChannelId: BluetoothRFCOMMChannelID = 0
         
         let serialPortServiceRecode = connectedDevice.getServiceRecord(for: IOBluetoothSDPUUID(uuid16: 0x1101))
         if (serialPortServiceRecode == nil) {
+            #if DEBUG
+            print("[BT]: ERROR - No serial port service record found")
+            #endif
             return false
         }
         
         if (serialPortServiceRecode!.getRFCOMMChannelID(&rfcommChannelId) != kIOReturnSuccess) {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to get RFCOMM channel ID")
+            #endif
             return false
         }
         
-        if (connectedDevice.openRFCOMMChannelSync(&rfcommChannel,
+        #if DEBUG
+        print("[BT]: Got RFCOMM channel ID: \(rfcommChannelId)")
+        #endif
+        
+        let result = connectedDevice.openRFCOMMChannelSync(&rfcommChannel,
                                                   withChannelID: rfcommChannelId,
-                                                  delegate: self) != kIOReturnSuccess) {
+                                                  delegate: self)
+        if (result != kIOReturnSuccess) {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to open RFCOMM channel, result: \(result)")
+            #endif
             return false
         }
+        
+        #if DEBUG
+        print("[BT]: Successfully opened RFCOMM channel")
+        #endif
         
         return true
     }
@@ -307,8 +463,20 @@ class Bt {
 extension Bt: IOBluetoothRFCOMMChannelDelegate {
     
     func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
-//        print("rfcommChannelClosed")
+        NSLog("[NoQCNoLife-BT]: RFCOMM channel closed")
+        #if DEBUG
+        print("[BT]: rfcommChannelClosed")
+        #endif
+        
+        // Reset connection state
         connectionState.reset()
+        
+        // Notify delegate that we're disconnected
+        self.delegate.onDisconnect()
+        
+        // Also unregister the disconnect notification if it exists
+        self.disconnectBtUserNotification?.unregister()
+        self.disconnectBtUserNotification = nil
     }
     
     func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
@@ -329,7 +497,7 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         }
         
         let buffer = UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength)
-        var array = Array(buffer)
+        let array = Array(buffer)
         
         #if DEBUG
         print("[Received]: \(array) (length: \(dataLength))")

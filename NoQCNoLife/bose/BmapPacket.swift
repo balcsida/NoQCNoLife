@@ -120,7 +120,7 @@ class BmapPacket {
         if (packet.count != 4 + payloadLen) {
             os_log("Failed to spawn BmapPacket: Invalid payload. Expected %d bytes, got %d bytes", type: .error, 4 + payloadLen, packet.count)
             #if DEBUG
-            print("Packet header: functionBlock=\(self.b), function=\(self.c), deviceId=\(self.d), port=\(self.e), operator=\(self.f), declaredPayloadLen=\(payloadLen)")
+            print("Packet header: functionBlock=\(self.b ?? 0), function=\(self.c ?? 0), deviceId=\(self.d ?? 0), port=\(self.e ?? 0), operator=\(self.f ?? 0), declaredPayloadLen=\(payloadLen)")
             print("Raw packet: \(packet)")
             #endif
             return nil

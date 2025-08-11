@@ -74,6 +74,12 @@ class StatusItem {
         return menuItems
     }
     
+    func isConnected() -> Bool {
+        let deviceNameMenuItemTag = StatusItem.MenuItemTags.DEVICE_NAME.rawValue
+        let deviceNameMenuItem = self.statusItem.menu?.item(withTag: deviceNameMenuItemTag) as? DeviceNameMenuItem
+        return deviceNameMenuItem?.hasDeviceName() ?? false
+    }
+    
     func connected (_ product: Bose.Products!) {
         let deviceNameMenuItemTag = StatusItem.MenuItemTags.DEVICE_NAME.rawValue
         let deviceNameMenuItem = self.statusItem.menu?.item(withTag: deviceNameMenuItemTag) as! DeviceNameMenuItem
@@ -237,6 +243,10 @@ class DeviceNameMenuItem : NSMenuItem {
     
     func setDeviceName(_ name: String) {
         self.title = name
+    }
+    
+    func hasDeviceName() -> Bool {
+        return self.title != defaultTitle
     }
 }
 

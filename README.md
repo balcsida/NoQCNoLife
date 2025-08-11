@@ -1,34 +1,46 @@
 # No QC, No Life
-このアプリケーションは、Bose QuietComfort 35をmacOSから操作するためのアプリケーションです。  
-メニューバー常駐型のアプリケーションで、バッテリー残量の確認、ノイズキャンセリングレベルの設定が可能です。
 
-QuietComfort 35は、私の生活にはなくてはならないものになっています。  
-同様の操作は、スマートフォンのアプリからも可能ですが、Macに接続して使う時間がほとんどなので、作成しました。
+This application lets you control the **Bose QuietComfort 35** from macOS.  
+It lives in your menu bar and allows you to check the battery level and adjust the noise-cancelling level.
 
-QuietComfort 35で動作確認をしています。  
-QuietComfort 35 series 2でも、たぶん動作すると思いますが、わかりません。  
-それ以外の機種では動作しません。
+Originally created by **Shun Ito** (@ll0s0ll) in 2021.
 
-非公式ですので、各方面に許可は取っておりません。ごめんなさい。
+QuietComfort 35 headphones have become indispensable to many users' daily lives.  
+While similar functions exist in the smartphone app, this Mac app provides convenient access to headphone controls directly from the menu bar.
 
-![QuietComfort 35を接続した場合のスクリーンショット](https://ll0s0ll.github.io/no-qc-no-life/img/screenshot_qc35.png "QuietComfort 35を接続した場合のスクリーンショット")
+The app has been tested on both QuietComfort 35 and QuietComfort 35 Series II.  
+Other supported models are listed below.
 
-## 使い方
-アプリケーションを実行し、通常通りQuietComfortを使用してください。  
-対象機種の接続、切断を自動認識します。  
-アプリケーションをログイン項目に追加すると、Macの起動時に自動的にアプリケーションが実行され、便利です。  
-ログイン項目は、システム環境設定 > ユーザーとグループ > ログイン項目 から追加できます。(10.13 High Sierraの場合)
+This is an unofficial project; we have not obtained permission from any of the relevant parties.
 
-## 対象機種
-QuietComfort 35
-SoundWear
+![Screenshot when QuietComfort 35 is connected](https://ll0s0ll.github.io/no-qc-no-life/img/screenshot_qc35.png "Screenshot when QuietComfort 35 is connected")
 
-## 動作環境
-macOS 10.13 (High Sierra) 以降。
+## How to Use
 
-## インストール
-[最新のリリース](https://github.com/ll0s0ll/NoQCNoLife/releases/latest)よりdmgファイルをダウンロードしてください。
+1. Launch the application and use your QuietComfort headphones as usual.  
+2. The app automatically detects when a supported device connects or disconnects.  
+3. For convenience, add the app to your **Login Items** so it launches at startup:  
+   **System Preferences ▸ Users & Groups ▸ Login Items** (on macOS 10.13 High Sierra).
 
+## Supported Devices
 
-## 免責
-本ソフトウエアを使用して発生した、物理的な破損、データ損失、金銭的な損失等、いかなる損害について一切責任を負いません。
+- Bose QuietComfort 35  
+- Bose QuietComfort 35 Series II
+- Bose SoundWear Companion
+
+## System Requirements
+
+macOS 10.13 (High Sierra) or later.
+
+## Installation
+
+Download the **.dmg** from the [latest release](https://github.com/ll0s0ll/NoQCNoLife/releases/latest).
+
+## Credits
+
+**Original Author:** Shun Ito @ll0s0ll (2020-2021)  
+**Current Maintainer:** Dávid Balatoni @balcsida (2025)
+
+## Disclaimer
+
+We accept no responsibility for any physical damage, data loss, financial loss, or any other harm resulting from the use of this software.
