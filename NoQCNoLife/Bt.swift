@@ -164,6 +164,8 @@ class Bt {
             print("[BT]: Successfully opened RFCOMM channel")
             #endif
             
+            // Unregister any existing disconnect notification to prevent duplicates
+            self.disconnectBtUserNotification?.unregister()
             self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                                selector: #selector(Bt.onDisconnectDetected))
             
@@ -273,6 +275,16 @@ class Bt {
         print("[BT]: DisconnectDetected")
         print("[BT]: Cleaning up connection state")
         #endif
+        
+        // Only process disconnect if we actually have a connection
+        // This prevents spurious disconnect notifications from affecting new connections
+        guard connectionState.device != nil || connectionState.channel != nil else {
+            #if DEBUG
+            print("[BT]: Ignoring disconnect notification - no active connection")
+            #endif
+            return
+        }
+        
         self.closeConnection()
         self.delegate.onDisconnect()
         
@@ -325,6 +337,8 @@ class Bt {
         connectionState.channel = channel
         connectionState.isConnecting = false
         
+        // Unregister any existing disconnect notification to prevent duplicates
+        self.disconnectBtUserNotification?.unregister()
         self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                            selector: #selector(Bt.onDisconnectDetected))
         
