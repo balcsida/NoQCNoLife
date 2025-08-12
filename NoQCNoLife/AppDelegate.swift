@@ -28,6 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var bt: Bt!
     var statusItem: StatusItem!
     var connectBtUserNotification: IOBluetoothUserNotification!
+    var statusUpdateTimer: Timer?
     
 //    func applicationWillFinishLaunching(_ aNotification: Notification) {
 //        print("applicationWillFinishLaunching()")
@@ -44,15 +45,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         NSLog("[NoQCNoLife]: Registered for Bluetooth notifications")
         
+        // Immediate check to verify Bt is initialized
+        NSLog("[NoQCNoLife]: Bt initialized: \(bt != nil)")
+        
         // Check for already connected devices after notifications are set up
+        NSLog("[NoQCNoLife]: Scheduling delayed check for connected devices...")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            NSLog("[NoQCNoLife]: Checking for connected devices on startup")
-            self?.bt.checkForConnectedDevices()
+            NSLog("[NoQCNoLife]: Delayed check timer fired")
+            guard let self = self else {
+                NSLog("[NoQCNoLife]: ERROR - self is nil in delayed check")
+                return
+            }
+            NSLog("[NoQCNoLife]: Checking for connected devices on startup (delayed by 1 second)")
+            print("[AppDelegate]: About to check for connected devices on startup")
+            self.bt.checkForConnectedDevices()
         }
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
+        self.statusUpdateTimer?.invalidate()
+        self.statusUpdateTimer = nil
         connectBtUserNotification?.unregister()
         self.bt?.closeConnection()
     }
@@ -66,14 +79,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: BluetoothDelegate {
     
     func onConnect() {
+        NSLog("[NoQCNoLife]: onConnect() called")
         guard let product = Bose.Products.getById(self.bt.getProductId()) else {
+            NSLog("[NoQCNoLife]: ERROR - Invalid product id in onConnect()")
             assert(false, "Invalid prodcut id.")
             return
         }
+        NSLog("[NoQCNoLife]: Connected to \(product.getName())")
         #if DEBUG
         print("[BT]: Connected to \(product.getName())")
         #endif
         self.statusItem.connected(product)
+        
+        // Start a timer to periodically check for noise cancellation changes
+        // This handles changes made from the headphone button
+        self.statusUpdateTimer?.invalidate()
+        self.statusUpdateTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            // Only update noise cancellation mode (not battery to save power)
+            _ = self.bt.sendGetAnrModePacket()
+        }
         
         // Don't automatically set ANR mode on connection - it interrupts the device
         // and causes a "boop" sound. Users can manually set it if needed.
@@ -88,17 +113,25 @@ extension AppDelegate: BluetoothDelegate {
         
         // Request battery level and noise cancellation mode after a short delay
         // This gives the device time to stabilize after connection
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self = self else { return }
+            
+            NSLog("[NoQCNoLife]: Requesting initial battery level and ANR mode (delayed by 1.5 seconds)")
             
             // Get battery level
             if (!self.bt.sendGetBatteryLevelPacket()) {
+                NSLog("[NoQCNoLife]: Failed to send battery level packet")
                 self.batteryLevelStatus(nil)
+            } else {
+                NSLog("[NoQCNoLife]: Successfully sent battery level request")
             }
             
             // Get current noise cancellation mode (just to display, not to set)
             if (!self.bt.sendGetAnrModePacket()) {
+                NSLog("[NoQCNoLife]: Failed to send ANR mode packet")
                 self.noiseCancelModeChanged(nil)
+            } else {
+                NSLog("[NoQCNoLife]: Successfully sent ANR mode request")
             }
         }
     }
@@ -107,6 +140,9 @@ extension AppDelegate: BluetoothDelegate {
         #if DEBUG
         print("[BT]: Disconnected")
         #endif
+        // Stop the status update timer when disconnected
+        self.statusUpdateTimer?.invalidate()
+        self.statusUpdateTimer = nil
         self.statusItem.disconnected()
     }
     
@@ -125,9 +161,12 @@ extension AppDelegate: BluetoothDelegate {
     }
     
     func noiseCancelModeChanged(_ mode: Bose.AnrMode?) {
+        NSLog("[NoQCNoLife]: noiseCancelModeChanged called with mode: \(mode?.toString() ?? "nil")")
         #if DEBUG
         print("[AnrModeEvent]: \(mode?.toString() ?? "nil")")
         #endif
+        
+        // Always update the UI, even if mode is nil
         self.statusItem.setNoiseCancelMode(mode)
         
         if (mode != nil) {
