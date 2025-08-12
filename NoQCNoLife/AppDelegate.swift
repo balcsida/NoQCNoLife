@@ -91,13 +91,29 @@ extension AppDelegate: BluetoothDelegate {
         #endif
         self.statusItem.connected(product)
         
-        // Start a timer to periodically check for noise cancellation changes
-        // This handles changes made from the headphone button
+        // Poll for status briefly after connection to ensure we have the correct state
+        // The Bose device automatically sends notifications when NC mode changes (from button presses)
+        // so we only need initial polling to establish the current state
+        var pollCount = 0
         self.statusUpdateTimer?.invalidate()
-        self.statusUpdateTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            // Only update noise cancellation mode (not battery to save power)
+        self.statusUpdateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            pollCount += 1
+            
+            // Request current status
             _ = self.bt.sendGetAnrModePacket()
+            
+            // Stop polling after 3 attempts (6 seconds total)
+            // After this, we rely on the device sending notifications for changes
+            if pollCount >= 3 {
+                NSLog("[NoQCNoLife]: Stopping initial status polling, device will send notifications for changes")
+                timer.invalidate()
+                self.statusUpdateTimer = nil
+            }
         }
         
         // Don't automatically set ANR mode on connection - it interrupts the device

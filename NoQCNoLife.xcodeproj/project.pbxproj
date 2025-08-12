@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 90;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -55,11 +55,9 @@
 /* Begin PBXFrameworksBuildPhase section */
 		847A51E42580471F002DEF2D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				E811D27F2E4B7050002AC4F3 /* SFSafeSymbols in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -136,8 +134,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = NoQCNoLife;
 			productName = NoQCNoLife;
 			productReference = 847A51E72580471F002DEF2D /* NoQCNoLife.app */;
@@ -164,7 +160,6 @@
 				};
 			};
 			buildConfigurationList = 847A51E22580471F002DEF2D /* Build configuration list for PBXProject "NoQCNoLife" */;
-			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -175,6 +170,7 @@
 			packageReferences = (
 				E811D27D2E4B7050002AC4F3 /* XCRemoteSwiftPackageReference "SFSafeSymbols" */,
 			);
+			preferredProjectObjectVersion = 90;
 			productRefGroup = 847A51E82580471F002DEF2D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -187,7 +183,6 @@
 /* Begin PBXResourcesBuildPhase section */
 		847A51E52580471F002DEF2D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				847A51FA25804931002DEF2D /* LICENSE in Resources */,
 				847A51ED25804723002DEF2D /* Assets.xcassets in Resources */,
@@ -195,14 +190,12 @@
 				847A51FC25804932002DEF2D /* Credits.rtf in Resources */,
 				847A51F025804723002DEF2D /* MainMenu.xib in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		847A51E32580471F002DEF2D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				847A521A25804B34002DEF2D /* SettingsFunctionBlock.swift in Sources */,
 				847A5205258049F6002DEF2D /* AppDelegate.swift in Sources */,
@@ -218,7 +211,6 @@
 				847A520125804998002DEF2D /* Bt.swift in Sources */,
 				847A521825804B34002DEF2D /* FunctionBlock.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -234,7 +226,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		847A51F325804723002DEF2D /* Debug */ = {
+		847A51F325804723002DEF2D /* Debug configuration for PBXProject "NoQCNoLife" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -299,7 +291,7 @@
 			};
 			name = Debug;
 		};
-		847A51F425804723002DEF2D /* Release */ = {
+		847A51F425804723002DEF2D /* Release configuration for PBXProject "NoQCNoLife" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -357,7 +349,7 @@
 			};
 			name = Release;
 		};
-		847A51F625804723002DEF2D /* Debug */ = {
+		847A51F625804723002DEF2D /* Debug configuration for PBXNativeTarget "NoQCNoLife" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -375,7 +367,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.ll0s0ll.NoQCNoLife;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.balcsida.NoQCNoLife;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
@@ -383,7 +375,7 @@
 			};
 			name = Debug;
 		};
-		847A51F725804723002DEF2D /* Release */ = {
+		847A51F725804723002DEF2D /* Release configuration for PBXNativeTarget "NoQCNoLife" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -401,7 +393,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.ll0s0ll.NoQCNoLife;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.balcsida.NoQCNoLife;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
@@ -415,19 +407,17 @@
 		847A51E22580471F002DEF2D /* Build configuration list for PBXProject "NoQCNoLife" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				847A51F325804723002DEF2D /* Debug */,
-				847A51F425804723002DEF2D /* Release */,
+				847A51F325804723002DEF2D /* Debug configuration for PBXProject "NoQCNoLife" */,
+				847A51F425804723002DEF2D /* Release configuration for PBXProject "NoQCNoLife" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		847A51F525804723002DEF2D /* Build configuration list for PBXNativeTarget "NoQCNoLife" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				847A51F625804723002DEF2D /* Debug */,
-				847A51F725804723002DEF2D /* Release */,
+				847A51F625804723002DEF2D /* Debug configuration for PBXNativeTarget "NoQCNoLife" */,
+				847A51F725804723002DEF2D /* Release configuration for PBXNativeTarget "NoQCNoLife" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
