@@ -416,7 +416,7 @@ class Bt {
         
         #if DEBUG
         print("[BT]: Successfully opened RFCOMM channel")
-        print("[BT]: Channel is open: \(rfcommChannel.isOpen()), delegate: \(rfcommChannel.delegate != nil)")
+        print("[BT]: Channel is open: \(rfcommChannel.isOpen())")
         print("[BT]: Channel MTU: \(rfcommChannel.getMTU())")
         #endif
         
@@ -424,7 +424,7 @@ class Bt {
         rfcommChannel.setDelegate(self)
         
         #if DEBUG
-        print("[BT]: After setDelegate - delegate: \(rfcommChannel.delegate != nil)")
+        print("[BT]: After setDelegate - delegate set")
         #endif
         
         return true
@@ -595,7 +595,6 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         #if DEBUG
         print("[BT]: rfcommChannelOpenComplete called, status: \(error)")
         print("[BT]: Channel in callback: \(rfcommChannel != nil), isOpen: \(rfcommChannel?.isOpen() ?? false)")
-        print("[BT]: Channel delegate in callback: \(rfcommChannel?.delegate != nil)")
         #endif
         
         // Prevent sending BMAP version packet multiple times if callback is triggered multiple times
