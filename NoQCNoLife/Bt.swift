@@ -98,6 +98,7 @@ class Bt {
     private let connectionState = ConnectionState()
     private var delegate: BluetoothDelegate
     private var disconnectBtUserNotification: IOBluetoothUserNotification?
+    private var bmapVersionRequested = false
     
     init(_ delegate: BluetoothDelegate) {
         self.delegate = delegate
@@ -200,6 +201,7 @@ class Bt {
     func closeConnection() {
         let channel = connectionState.channel
         connectionState.reset()
+        bmapVersionRequested = false  // Reset the flag for next connection
         
         let result = channel?.close()
         if (result != nil && result != 0 ) {
@@ -518,6 +520,7 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         
         // Reset connection state
         connectionState.reset()
+        bmapVersionRequested = false  // Reset the flag for next connection
         
         // Notify delegate that we're disconnected
         self.delegate.onDisconnect()
@@ -595,6 +598,15 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         print("[BT]: Channel delegate in callback: \(rfcommChannel?.delegate != nil)")
         #endif
         
+        // Prevent sending BMAP version packet multiple times if callback is triggered multiple times
+        if bmapVersionRequested {
+            #if DEBUG
+            print("[BT]: BMAP version already requested, skipping duplicate")
+            #endif
+            return
+        }
+        bmapVersionRequested = true
+        
         // [重要] BmapVersionを取得しないと、一切データを送ってこない。
         guard let packet = Bose.generateGetBmapVersionPacket() else {
             // assert(false, "Failed to generate getBmapVersionPacket @ Bt::rfcommChannelOpenComplete()")
@@ -639,9 +651,9 @@ protocol  BluetoothDelegate: EventHandler {
 extension BluetoothDelegate {
     func bmapVersionEvent(_ version: String?) {
 //        print("[BmapVersionEvent]: \(version)")
-        if (version != nil) {
-            self.onConnect()
-        } else {
+        // Don't call onConnect() here as it's already called when connection is established
+        // This was causing duplicate menu items
+        if (version == nil) {
             self.onDisconnect()
         }
     }

@@ -84,6 +84,15 @@ class StatusItem {
     func connected (_ product: Bose.Products!) {
         let deviceNameMenuItemTag = StatusItem.MenuItemTags.DEVICE_NAME.rawValue
         let deviceNameMenuItem = self.statusItem.menu?.item(withTag: deviceNameMenuItemTag) as! DeviceNameMenuItem
+        
+        // Check if already connected to prevent duplicate menu items
+        if deviceNameMenuItem.hasDeviceName() {
+            #if DEBUG
+            print("[StatusItem]: Already connected, skipping duplicate menu items")
+            #endif
+            return
+        }
+        
         deviceNameMenuItem.setDeviceName(product.getName())
         
         for menuItem in buildMenuItems(product).reversed() {
