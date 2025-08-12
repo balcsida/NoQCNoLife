@@ -135,7 +135,7 @@ class StatusItem {
         let tag: Int = StatusItem.MenuItemTags.NOISE_CANCEL_MODE.rawValue
         guard let menuItem = self.statusItem.menu?.item(withTag: tag) as? NoiseCancelModeMenuItem else {
             #if DEBUG
-            print("[StatusItem]: Noise cancel menu item not found, skipping update")
+            print("[StatusItem]: Noise cancellation menu item not found, skipping update")
             #endif
             return
         }
@@ -316,7 +316,7 @@ class NoiseCancelModeMenuItem : NSMenuItem {
         
         self.delegate = delegate
         
-        super.init(title: "Noise cancel: N/A", action: nil, keyEquivalent: "")
+        super.init(title: "Noise cancellation: N/A", action: nil, keyEquivalent: "")
         
         self.tag = StatusItem.MenuItemTags.NOISE_CANCEL_MODE.rawValue
         self.target = self
@@ -373,12 +373,12 @@ class NoiseCancelModeMenuItem : NSMenuItem {
     
     func setNoiseCancelMode(_ mode: Bose.AnrMode!) {
         if (mode == nil) {
-            self.title = "Noise cancel: error"
+            self.title = "Noise cancellation: error"
             for subMenuItem in self.submenu?.items ?? [] {
                 subMenuItem.state = NSControl.StateValue.off
             }
         } else {
-            self.title = "Noise cancel: \(mode.toString())"
+            self.title = "Noise cancellation: \(mode.toString())"
             for subMenuItem in self.submenu?.items ?? [] {
                 if (subMenuItem.tag == mode.rawValue) {
                     subMenuItem.state = NSControl.StateValue.on
