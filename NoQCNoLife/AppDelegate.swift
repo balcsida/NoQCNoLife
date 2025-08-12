@@ -57,7 +57,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             NSLog("[NoQCNoLife]: Checking for connected devices on startup (delayed by 1 second)")
+            #if DEBUG
             print("[AppDelegate]: About to check for connected devices on startup")
+            #endif
             self.bt.checkForConnectedDevices()
         }
     }
@@ -82,7 +84,7 @@ extension AppDelegate: BluetoothDelegate {
         NSLog("[NoQCNoLife]: onConnect() called")
         guard let product = Bose.Products.getById(self.bt.getProductId()) else {
             NSLog("[NoQCNoLife]: ERROR - Invalid product id in onConnect()")
-            assert(false, "Invalid prodcut id.")
+            // assert(false, "Invalid prodcut id.")
             return
         }
         NSLog("[NoQCNoLife]: Connected to \(product.getName())")

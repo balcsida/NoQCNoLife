@@ -60,7 +60,16 @@ private class ConnectionState {
     
     func sendPacket(_ packet: [Int8]) -> IOReturn? {
         return queue.sync {
-            guard let channel = _channel else { return nil }
+            guard let channel = _channel else {
+                #if DEBUG
+                print("[BT]: ERROR - No channel available for sending packet")
+                #endif
+                return nil
+            }
+            
+            #if DEBUG
+            print("[BT]: Sending packet on channel - isOpen: \(channel.isOpen())")
+            #endif
             
             // Create a completely independent buffer for the packet
             let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: packet.count)
@@ -71,7 +80,15 @@ private class ConnectionState {
                 buffer[i] = packet[i]
             }
             
-            return channel.writeSync(buffer, length: UInt16(packet.count))
+            let result = channel.writeSync(buffer, length: UInt16(packet.count))
+            
+            #if DEBUG
+            if result != kIOReturnSuccess {
+                print("[BT]: ERROR - Failed to write to channel, result: \(result)")
+            }
+            #endif
+            
+            return result
         }
     }
 }
@@ -272,15 +289,15 @@ class Bt {
     
     @objc func onDisconnectDetected() {
         #if DEBUG
-        print("[BT]: DisconnectDetected")
+        print("[BT]: DisconnectDetected - device: \(connectionState.device != nil), channel: \(connectionState.channel != nil)")
         print("[BT]: Cleaning up connection state")
         #endif
         
         // Only process disconnect if we actually have a connection
         // This prevents spurious disconnect notifications from affecting new connections
-        guard connectionState.device != nil || connectionState.channel != nil else {
+        guard connectionState.device != nil && connectionState.channel != nil else {
             #if DEBUG
-            print("[BT]: Ignoring disconnect notification - no active connection")
+            print("[BT]: Ignoring disconnect notification - no active connection or incomplete connection")
             #endif
             return
         }
@@ -324,16 +341,19 @@ class Bt {
             return
         }
         
+        // Set device and productId BEFORE opening channel
+        // This prevents disconnect detection from closing the channel prematurely
+        connectionState.device = device
+        connectionState.productId = productId
+        
         var channel: IOBluetoothRFCOMMChannel!
         if (!openConnection(connectedDevice: device, rfcommChannel: &channel)) {
             os_log("Failed to open rfcomm channel.", type: .error)
-            connectionState.isConnecting = false
+            connectionState.reset()  // Reset on failure
             return
         }
         
-        // Set all connection state atomically
-        connectionState.device = device
-        connectionState.productId = productId
+        // Set the channel after successful opening
         connectionState.channel = channel
         connectionState.isConnecting = false
         
@@ -394,6 +414,15 @@ class Bt {
         
         #if DEBUG
         print("[BT]: Successfully opened RFCOMM channel")
+        print("[BT]: Channel is open: \(rfcommChannel.isOpen()), delegate: \(rfcommChannel.delegate != nil)")
+        print("[BT]: Channel MTU: \(rfcommChannel.getMTU())")
+        #endif
+        
+        // Explicitly set delegate again to ensure it's properly configured
+        rfcommChannel.setDelegate(self)
+        
+        #if DEBUG
+        print("[BT]: After setDelegate - delegate: \(rfcommChannel.delegate != nil)")
         #endif
         
         return true
@@ -501,7 +530,9 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
     func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
                            data dataPointer: UnsafeMutableRawPointer!,
                            length dataLength: Int) {
-        //        print("rfcommChannelData")
+        #if DEBUG
+        print("[BT]: rfcommChannelData called with \(dataLength) bytes")
+        #endif
         
         // Validate input parameters
         guard dataPointer != nil, dataLength > 0 else {
@@ -558,19 +589,38 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
     
     func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
                                    status error: IOReturn) {
-//        print("rfcommChannelOpenComplete")
+        #if DEBUG
+        print("[BT]: rfcommChannelOpenComplete called, status: \(error)")
+        print("[BT]: Channel in callback: \(rfcommChannel != nil), isOpen: \(rfcommChannel?.isOpen() ?? false)")
+        print("[BT]: Channel delegate in callback: \(rfcommChannel?.delegate != nil)")
+        #endif
+        
         // [重要] BmapVersionを取得しないと、一切データを送ってこない。
         guard let packet = Bose.generateGetBmapVersionPacket() else {
-            assert(false, "Failed to generate getBmapVersionPacket @ Bt::rfcommChannelOpenComplete()")
+            // assert(false, "Failed to generate getBmapVersionPacket @ Bt::rfcommChannelOpenComplete()")
             os_log("Failed to generate getBmapVersionPacket.", type: .error)
+            #if DEBUG
+            print("[BT]: ERROR - Failed to generate BMAP version packet")
+            #endif
             self.closeConnection()
             self.delegate.bmapVersionEvent(nil)
             return
         }
         
+        #if DEBUG
+        print("[BT]: Sending BMAP version packet: \(packet)")
+        #endif
+        
         if (self.sendPacketSync(packet) == false) {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to send BMAP version packet")
+            #endif
             self.closeConnection()
             self.delegate.bmapVersionEvent(nil)
+        } else {
+            #if DEBUG
+            print("[BT]: Successfully sent BMAP version packet")
+            #endif
         }
     }
     
