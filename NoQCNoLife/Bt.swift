@@ -327,6 +327,11 @@ class Bt {
         
         self.disconnectBtUserNotification = device.register(forDisconnectNotification: self,
                                                            selector: #selector(Bt.onDisconnectDetected))
+        
+        // IMPORTANT: Notify the delegate that we're connected
+        // This was missing when connection happens through onNewConnectionDetected
+        NSLog("[NoQCNoLife-BT]: Connection established through onNewConnectionDetected, notifying delegate")
+        self.delegate.onConnect()
     }
     
     private func openConnection(connectedDevice: IOBluetoothDevice!, rfcommChannel: inout IOBluetoothRFCOMMChannel!) -> Bool {
