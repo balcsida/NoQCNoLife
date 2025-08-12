@@ -19,6 +19,7 @@
  */
 
 import Cocoa
+import SFSafeSymbols
 
 class StatusItem {
     
@@ -41,9 +42,9 @@ class StatusItem {
         
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
-        let buttonImage = NSImage(named: "ButtonImg")
-        buttonImage?.isTemplate = true
-        self.statusItem.button?.image = buttonImage
+        // Use SF Symbol for menu bar icon with SFSafeSymbols
+        let image = NSImage(systemSymbol: .waveformCircle)
+        self.statusItem.button?.image = image
 
         let mainMenu = NSMenu.init()
         mainMenu.delegate = delegate
@@ -103,6 +104,9 @@ class StatusItem {
                 menuItem.menu?.removeItem(menuItem)
             }
         }
+        
+        // Reset icon to default when disconnected
+        updateButtonImage(for: nil)
     }
     
     func setBassControlStep(_ step: Int?) {
@@ -136,6 +140,45 @@ class StatusItem {
             return
         }
         menuItem.setNoiseCancelMode(mode)
+        
+        // Update menu bar icon based on noise cancellation mode
+        updateButtonImage(for: mode)
+    }
+    
+    private func updateButtonImage(for mode: Bose.AnrMode?) {
+        // Use SF Symbols with SFSafeSymbols
+        let symbol: SFSymbol
+        
+        if mode == nil {
+            // No device connected - use basic waveform circle
+            symbol = .waveformCircle
+        } else {
+            switch mode! {
+            case .HIGH:
+                // High noise cancellation - filled circle with waveform
+                symbol = .waveformCircleFill
+            case .LOW:
+                // Low noise cancellation - regular circle with waveform
+                symbol = .waveformCircle
+            case .OFF:
+                // Noise cancellation off - just waveform
+                symbol = .waveform
+            case .WIND:
+                // Wind mode - use waveform with path
+                symbol = .waveformPath
+            }
+        }
+        
+        #if DEBUG
+        print("[StatusItem]: Updating button image for mode: \(mode?.toString() ?? "nil") with symbol: \(symbol)")
+        #endif
+        
+        let image = NSImage(systemSymbol: symbol)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+        self.statusItem.button?.image = image.withSymbolConfiguration(symbolConfig) ?? image
+        
+        // Force the status item to redraw
+        self.statusItem.button?.needsDisplay = true
     }
 }
 
