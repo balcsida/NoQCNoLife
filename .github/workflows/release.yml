@@ -35,38 +35,41 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             PRODUCT_BUNDLE_IDENTIFIER="io.github.balcsida.NoQCNoLife"
             
+      - name: Install create-dmg
+        run: |
+          npm install -g create-dmg
+          
+      - name: Extract app icon
+        run: |
+          # Extract the largest icon from the app for use as volume icon
+          iconutil -c iconset "build/Build/Products/Release/NoQCNoLife.app/Contents/Resources/AppIcon.icns"
+          cp AppIcon.iconset/icon_512x512@2x.png volume-icon.png || \
+          cp AppIcon.iconset/icon_512x512.png volume-icon.png || \
+          echo "Warning: Could not extract volume icon"
+          
       - name: Create DMG
         run: |
-          # Create a temporary directory for DMG contents
-          mkdir -p dmg_contents
-          
-          # Copy the app
-          cp -R "build/Build/Products/Release/NoQCNoLife.app" dmg_contents/
-          
-          # Create Applications symlink
-          ln -s /Applications dmg_contents/Applications
-          
-          # Create README file for DMG
-          cat > dmg_contents/README.txt << EOF
-          No QC, No Life
-          ==============
-          
-          To install:
-          1. Drag "NoQCNoLife.app" to the Applications folder
-          2. Launch from Applications
-          3. Grant Bluetooth permissions when prompted
-          
-          The app will appear in your menu bar.
-          
-          For more information, visit:
-          https://github.com/balcsida/NoQCNoLife
-          EOF
-          
-          # Create the DMG
-          hdiutil create -volname "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}" \
-            -srcfolder dmg_contents \
-            -ov -format UDZO \
-            "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg"
+          # Create professional DMG using create-dmg
+          npx create-dmg \
+            --volname "NoQCNoLife ${{ steps.get_version.outputs.VERSION }}" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "NoQCNoLife.app" 150 185 \
+            --hide-extension "NoQCNoLife.app" \
+            --app-drop-link 450 185 \
+            --no-internet-enable \
+            "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg" \
+            "build/Build/Products/Release/NoQCNoLife.app" || \
+          # Fallback to basic DMG if create-dmg fails
+          (echo "create-dmg failed, falling back to hdiutil..." && \
+           mkdir -p dmg_temp && \
+           cp -R "build/Build/Products/Release/NoQCNoLife.app" dmg_temp/ && \
+           ln -s /Applications dmg_temp/Applications && \
+           hdiutil create -volname "NoQCNoLife ${{ steps.get_version.outputs.VERSION }}" \
+             -srcfolder dmg_temp \
+             -ov -format UDZO \
+             "NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg")
             
       - name: Calculate checksums
         id: checksums
