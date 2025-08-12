@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-release:
     name: Build and Release DMG
-    runs-on: macos-latest
+    runs-on: macos-15
     
     steps:
       - name: Checkout
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '16.4'
           
       - name: Get version from tag
         id: get_version
