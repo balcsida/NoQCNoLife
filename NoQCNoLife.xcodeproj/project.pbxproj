@@ -25,6 +25,7 @@
 		847A521B25804B34002DEF2D /* StatusFunctionBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A521525804B34002DEF2D /* StatusFunctionBlock.swift */; };
 		847A521C25804B34002DEF2D /* ProductInfoFunctionBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A521625804B34002DEF2D /* ProductInfoFunctionBlock.swift */; };
 		84896F3D269BBE9D00B62D1A /* PreferenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84896F3C269BBE9D00B62D1A /* PreferenceManager.swift */; };
+		E811D27F2E4B7050002AC4F3 /* SFSafeSymbols in Frameworks */ = {isa = PBXBuildFile; productRef = E811D27E2E4B7050002AC4F3 /* SFSafeSymbols */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E811D27F2E4B7050002AC4F3 /* SFSafeSymbols in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +172,9 @@
 				Base,
 			);
 			mainGroup = 847A51DE2580471F002DEF2D;
+			packageReferences = (
+				E811D27D2E4B7050002AC4F3 /* XCRemoteSwiftPackageReference "SFSafeSymbols" */,
+			);
 			productRefGroup = 847A51E82580471F002DEF2D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -426,6 +431,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E811D27D2E4B7050002AC4F3 /* XCRemoteSwiftPackageReference "SFSafeSymbols" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SFSafeSymbols/SFSafeSymbols";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E811D27E2E4B7050002AC4F3 /* SFSafeSymbols */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E811D27D2E4B7050002AC4F3 /* XCRemoteSwiftPackageReference "SFSafeSymbols" */;
+			productName = SFSafeSymbols;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 847A51DF2580471F002DEF2D /* Project object */;
 }
