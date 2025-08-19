@@ -18,6 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+import IOBluetooth
+
 class DeviceManagementFunctionBlock: FunctionBlock {
     
     /*
@@ -116,25 +118,51 @@ private class ListDevicesFunction: Function {
     static let id: Int8 = 4
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+        // According to BMAP docs, LIST_DEVICES response has operator STATUS (3)
         if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.STATUS {
             guard let payload = bmapPacket.getPayload(), payload.count > 0 else {
                 print("[ListDevicesEvent]: Empty payload")
+                // Notify with empty list
+                if let deviceEventHandler = eventHandler as? DeviceManagementEventHandler {
+                    deviceEventHandler.onDeviceListReceived([])
+                }
                 return
             }
             
             let deviceCount = Int(UInt8(bitPattern: payload[0]))
-            print("[ListDevicesEvent]: Found \(deviceCount) devices")
+            print("[ListDevicesEvent]: Found \(deviceCount) devices connected to Bose headphone")
             
+            var devices: [BoseConnectedDevice] = []
             var offset = 1
+            
+            // Get current Mac's Bluetooth address to identify current device
+            let currentMacAddress = IOBluetoothHostController.default()?.addressAsString()
+            
             for i in 0..<deviceCount {
                 if offset + 6 <= payload.count {
                     let macAddress = Array(payload[offset..<(offset + 6)])
                     let macString = macAddress.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: ":")
                     print("[Device \(i)]: MAC Address: \(macString)")
+                    
+                    let isCurrentDevice = (macString == currentMacAddress)
+                    
+                    let device = BoseConnectedDevice(
+                        name: isCurrentDevice ? "This Mac" : nil, // Will be looked up later
+                        address: macString,
+                        isConnected: true, // Devices in this list are connected to the Bose device
+                        isCurrentDevice: isCurrentDevice
+                    )
+                    
+                    devices.append(device)
                     offset += 6
                 } else {
                     break
                 }
+            }
+            
+            // Notify the event handler with the device list
+            if let deviceEventHandler = eventHandler as? DeviceManagementEventHandler {
+                deviceEventHandler.onDeviceListReceived(devices)
             }
         }
     }

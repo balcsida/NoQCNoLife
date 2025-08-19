@@ -78,7 +78,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-extension AppDelegate: BluetoothDelegate {
+extension AppDelegate: BluetoothDelegate, DeviceManagementEventHandler {
     
     func onConnect() {
         NSLog("[NoQCNoLife]: onConnect() called")
@@ -192,6 +192,13 @@ extension AppDelegate: BluetoothDelegate {
                 PreferenceManager.setLastSelectedAnrMode(product: product, anrMode: mode!)
             }
         }
+    }
+    
+    // MARK: - DeviceManagementEventHandler
+    
+    func onDeviceListReceived(_ devices: [BoseConnectedDevice]) {
+        // Forward the device list to the connections window if it's open
+        ConnectionsWindowController.shared.didReceiveDeviceList(devices)
     }
 }
 

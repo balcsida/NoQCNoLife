@@ -24,3 +24,7 @@ protocol EventHandler {
     func noiseCancelModeChanged(_ mode: Bose.AnrMode?)
     func bassControlStepChanged(_ step: Int?)
 }
+
+protocol DeviceManagementEventHandler: EventHandler {
+    func onDeviceListReceived(_ devices: [BoseConnectedDevice])
+}

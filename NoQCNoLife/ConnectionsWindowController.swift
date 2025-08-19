@@ -21,15 +21,18 @@
 import Cocoa
 import IOBluetooth
 
-struct DeviceInfo {
-    let name: String
+struct BoseConnectedDevice {
+    let name: String?
     let address: String
     let isConnected: Bool
     let isCurrentDevice: Bool
-    let productId: Int?
 }
 
-class ConnectionsWindowController: NSWindowController {
+protocol DeviceListDelegate: AnyObject {
+    func didReceiveDeviceList(_ devices: [BoseConnectedDevice])
+}
+
+class ConnectionsWindowController: NSWindowController, DeviceListDelegate {
     
     static let shared = ConnectionsWindowController()
     
@@ -38,8 +41,9 @@ class ConnectionsWindowController: NSWindowController {
     private var disconnectButton: NSButton!
     private var refreshButton: NSButton!
     
-    private var devices: [DeviceInfo] = []
+    private var boseConnectedDevices: [BoseConnectedDevice] = []
     private var selectedDeviceIndex: Int = -1
+    private var currentMacAddress: String?
     
     private init() {
         let window = NSWindow(
@@ -135,44 +139,40 @@ class ConnectionsWindowController: NSWindowController {
     }
     
     @objc private func refreshDevices() {
-        devices.removeAll()
-        
-        guard let pairedDevices = IOBluetoothDevice.pairedDevices() else {
-            devicesTableView.reloadData()
-            updateButtonStates()
+        guard let appDelegate = NSApp.delegate as? AppDelegate else {
+            print("Error: Cannot access AppDelegate")
             return
         }
         
-        let currentDeviceAddress = getCurrentDeviceBluetoothAddress()
-        
-        for pairedDevice in pairedDevices {
-            guard let device = pairedDevice as? IOBluetoothDevice,
-                  let address = device.addressString,
-                  let name = device.name else { continue }
-            
-            let isCurrentDevice = (address == currentDeviceAddress)
-            let isConnected = device.isConnected()
-            var productId: Int? = nil
-            
-            if let pnpInfo = processPnPInfo(device) {
-                if Bose.isSupportedBoseProduct(venderId: pnpInfo.venderId, productId: pnpInfo.productId) {
-                    productId = pnpInfo.productId
-                }
-            }
-            
-            let deviceInfo = DeviceInfo(
-                name: name,
-                address: address,
-                isConnected: isConnected,
-                isCurrentDevice: isCurrentDevice,
-                productId: productId
-            )
-            
-            devices.append(deviceInfo)
-        }
-        
+        // Clear existing devices
+        boseConnectedDevices.removeAll()
         devicesTableView.reloadData()
         updateButtonStates()
+        
+        // Get current Mac's Bluetooth address to identify it
+        currentMacAddress = getCurrentDeviceBluetoothAddress()
+        
+        // Check if we have a connected Bose device
+        guard appDelegate.bt.getProductId() != nil else {
+            // Show message that no Bose device is connected
+            let statusLabel = NSTextField(frame: NSRect(x: 20, y: 180, width: 460, height: 40))
+            statusLabel.stringValue = "No Bose device connected.\nPlease connect a Bose device first to manage its connections."
+            statusLabel.isEditable = false
+            statusLabel.isBordered = false
+            statusLabel.backgroundColor = NSColor.clear
+            statusLabel.textColor = NSColor.secondaryLabelColor
+            statusLabel.alignment = .center
+            window?.contentView?.addSubview(statusLabel)
+            return
+        }
+        
+        // Send BMAP LIST_DEVICES command to get devices connected to the Bose headphone
+        if !appDelegate.bt.sendListDevicesPacket() {
+            print("Failed to send LIST_DEVICES packet to Bose device")
+        }
+        
+        // Note: The response will be handled by the BMAP parsing system
+        // and will call our delegate method when devices are received
     }
     
     private func getCurrentDeviceBluetoothAddress() -> String? {
@@ -193,9 +193,9 @@ class ConnectionsWindowController: NSWindowController {
     }
     
     @objc private func connectToDevice() {
-        guard selectedDeviceIndex >= 0 && selectedDeviceIndex < devices.count else { return }
+        guard selectedDeviceIndex >= 0 && selectedDeviceIndex < boseConnectedDevices.count else { return }
         
-        let device = devices[selectedDeviceIndex]
+        let device = boseConnectedDevices[selectedDeviceIndex]
         
         if device.isCurrentDevice {
             let alert = NSAlert()
@@ -213,7 +213,7 @@ class ConnectionsWindowController: NSWindowController {
         
         let macAddressBytes = parseMacAddress(device.address)
         if appDelegate.bt.sendConnectDevicePacket(macAddress: macAddressBytes) {
-            print("Sent connect command to device: \(device.name) (\(device.address))")
+            print("Sent connect command to device: \(device.name ?? "Unknown") (\(device.address))")
             // Refresh devices after a delay to see connection status
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 self.refreshDevices()
@@ -228,9 +228,9 @@ class ConnectionsWindowController: NSWindowController {
     }
     
     @objc private func disconnectFromDevice() {
-        guard selectedDeviceIndex >= 0 && selectedDeviceIndex < devices.count else { return }
+        guard selectedDeviceIndex >= 0 && selectedDeviceIndex < boseConnectedDevices.count else { return }
         
-        let device = devices[selectedDeviceIndex]
+        let device = boseConnectedDevices[selectedDeviceIndex]
         
         if device.isCurrentDevice {
             let alert = NSAlert()
@@ -248,7 +248,7 @@ class ConnectionsWindowController: NSWindowController {
         
         let macAddressBytes = parseMacAddress(device.address)
         if appDelegate.bt.sendDisconnectDevicePacket(macAddress: macAddressBytes) {
-            print("Sent disconnect command to device: \(device.name) (\(device.address))")
+            print("Sent disconnect command to device: \(device.name ?? "Unknown") (\(device.address))")
             // Refresh devices after a delay to see connection status
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 self.refreshDevices()
@@ -267,18 +267,28 @@ class ConnectionsWindowController: NSWindowController {
         return components.compactMap { UInt8($0, radix: 16) }
     }
     
+    // MARK: - DeviceListDelegate
+    
+    func didReceiveDeviceList(_ devices: [BoseConnectedDevice]) {
+        DispatchQueue.main.async {
+            self.boseConnectedDevices = devices
+            self.devicesTableView.reloadData()
+            self.updateButtonStates()
+        }
+    }
+    
     private func updateButtonStates() {
-        let hasValidSelection = selectedDeviceIndex >= 0 && selectedDeviceIndex < devices.count
+        let hasValidSelection = selectedDeviceIndex >= 0 && selectedDeviceIndex < boseConnectedDevices.count
         
         if hasValidSelection {
-            let device = devices[selectedDeviceIndex]
+            let device = boseConnectedDevices[selectedDeviceIndex]
             
             if device.isCurrentDevice {
                 connectButton.isEnabled = false
                 disconnectButton.isEnabled = false
             } else {
-                connectButton.isEnabled = !device.isConnected && device.productId != nil
-                disconnectButton.isEnabled = device.isConnected && device.productId != nil
+                connectButton.isEnabled = !device.isConnected
+                disconnectButton.isEnabled = device.isConnected
             }
         } else {
             connectButton.isEnabled = false
@@ -290,16 +300,16 @@ class ConnectionsWindowController: NSWindowController {
 extension ConnectionsWindowController: NSTableViewDataSource {
     
     func numberOfRows(in tableView: NSTableView) -> Int {
-        return devices.count
+        return boseConnectedDevices.count
     }
 }
 
 extension ConnectionsWindowController: NSTableViewDelegate {
     
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        guard row < devices.count else { return nil }
+        guard row < boseConnectedDevices.count else { return nil }
         
-        let device = devices[row]
+        let device = boseConnectedDevices[row]
         let identifier = tableColumn?.identifier.rawValue ?? ""
         
         let cellView = NSTextField()
@@ -309,12 +319,10 @@ extension ConnectionsWindowController: NSTableViewDelegate {
         
         switch identifier {
         case "name":
-            cellView.stringValue = device.name
+            cellView.stringValue = device.name ?? "Unknown Device"
             if device.isCurrentDevice {
                 cellView.stringValue += " (Current Device)"
                 cellView.textColor = NSColor.secondaryLabelColor
-            } else if device.productId == nil {
-                cellView.textColor = NSColor.tertiaryLabelColor
             }
         case "status":
             if device.isCurrentDevice {
@@ -330,9 +338,6 @@ extension ConnectionsWindowController: NSTableViewDelegate {
         case "address":
             cellView.stringValue = device.address
             cellView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-            if device.productId == nil {
-                cellView.textColor = NSColor.tertiaryLabelColor
-            }
         default:
             return nil
         }
