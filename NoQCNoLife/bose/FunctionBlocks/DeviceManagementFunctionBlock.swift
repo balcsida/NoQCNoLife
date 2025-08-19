@@ -46,12 +46,49 @@ class DeviceManagementFunctionBlock: FunctionBlock {
             ConnectFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case DisconnectFunction.id:
             DisconnectFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
+        case ListDevicesFunction.id:
+            ListDevicesFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case nil:
             assert(false, "Invalid function id.")
         default:
             print("Not implemented func: \(bmapPacket.getFunctionId()!) @ DeviceManagementFunctionBlock")
             print(bmapPacket.toString())
         }
+    }
+    
+    static func generateListDevicesPacket() -> [Int8]? {
+        let packet = BmapPacket(functionBlockId: id,
+                               functionId: ListDevicesFunction.id,
+                               operatorId: BmapPacket.OperatorIds.GET,
+                               deviceId: 0,
+                               port: 0,
+                               payload: [])
+        return packet.getPacket()
+    }
+    
+    static func generateConnectDevicePacket(macAddress: [UInt8]) -> [Int8]? {
+        guard macAddress.count == 6 else { return nil }
+        var payload: [Int8] = [0x00]
+        payload.append(contentsOf: macAddress.map { Int8(bitPattern: $0) })
+        let packet = BmapPacket(functionBlockId: id,
+                               functionId: ConnectFunction.id,
+                               operatorId: BmapPacket.OperatorIds.START,
+                               deviceId: 0,
+                               port: 0,
+                               payload: payload)
+        return packet.getPacket()
+    }
+    
+    static func generateDisconnectDevicePacket(macAddress: [UInt8]) -> [Int8]? {
+        guard macAddress.count == 6 else { return nil }
+        let payload = macAddress.map { Int8(bitPattern: $0) }
+        let packet = BmapPacket(functionBlockId: id,
+                               functionId: DisconnectFunction.id,
+                               operatorId: BmapPacket.OperatorIds.START,
+                               deviceId: 0,
+                               port: 0,
+                               payload: payload)
+        return packet.getPacket()
     }
 }
 
@@ -71,5 +108,34 @@ private class DisconnectFunction: Function {
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
 //        print("[DisconnectEvent]")
+    }
+}
+
+private class ListDevicesFunction: Function {
+    
+    static let id: Int8 = 4
+    
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+        if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.STATUS {
+            guard let payload = bmapPacket.getPayload(), payload.count > 0 else {
+                print("[ListDevicesEvent]: Empty payload")
+                return
+            }
+            
+            let deviceCount = Int(UInt8(bitPattern: payload[0]))
+            print("[ListDevicesEvent]: Found \(deviceCount) devices")
+            
+            var offset = 1
+            for i in 0..<deviceCount {
+                if offset + 6 <= payload.count {
+                    let macAddress = Array(payload[offset..<(offset + 6)])
+                    let macString = macAddress.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: ":")
+                    print("[Device \(i)]: MAC Address: \(macString)")
+                    offset += 6
+                } else {
+                    break
+                }
+            }
+        }
     }
 }

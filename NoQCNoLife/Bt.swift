@@ -508,6 +508,30 @@ class Bt {
         }
         return sendPacketSync(packet)
     }
+    
+    func sendListDevicesPacket() -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateListDevicesPacket() else {
+            os_log("Failed to generate list devices packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendConnectDevicePacket(macAddress: [UInt8]) -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateConnectDevicePacket(macAddress: macAddress) else {
+            os_log("Failed to generate connect device packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendDisconnectDevicePacket(macAddress: [UInt8]) -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateDisconnectDevicePacket(macAddress: macAddress) else {
+            os_log("Failed to generate disconnect device packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
 }
 
 extension Bt: IOBluetoothRFCOMMChannelDelegate {
