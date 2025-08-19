@@ -99,6 +99,8 @@ class Bt {
     private var delegate: BluetoothDelegate
     private var disconnectBtUserNotification: IOBluetoothUserNotification?
     private var bmapVersionRequested = false
+    private var lastDeviceCheckTime: Date = Date.distantPast
+    private let deviceCheckCooldown: TimeInterval = 0.5 // Minimum 500ms between checks
     
     init(_ delegate: BluetoothDelegate) {
         self.delegate = delegate
@@ -111,6 +113,7 @@ class Bt {
         
         // Simply reset state and try to connect
         connectionState.reset()
+        bmapVersionRequested = false // Reset the flag for next connection
         
         // Wait a moment then try to connect
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -141,14 +144,23 @@ class Bt {
             print("[BT]: Have device but no channel, resetting connection state")
             #endif
             connectionState.reset()
+            bmapVersionRequested = false
         }
         
-        // If already connected with a valid channel, skip
-        if connectionState.device != nil && connectionState.channel != nil {
-            #if DEBUG
-            print("[BT]: Already connected with valid channel, skipping check")
-            #endif
-            return
+        // If already connected with a valid channel, verify it's still active
+        if let channel = connectionState.channel, connectionState.device != nil {
+            if channel.isOpen() {
+                #if DEBUG
+                print("[BT]: Already connected with valid open channel, skipping check")
+                #endif
+                return
+            } else {
+                #if DEBUG
+                print("[BT]: Channel exists but is closed, resetting connection state")
+                #endif
+                connectionState.reset()
+                bmapVersionRequested = false
+            }
         }
         
         connectionState.isConnecting = true
@@ -229,51 +241,58 @@ class Bt {
         print("[BT]: Found \(pairedDevices.count) paired devices")
         #endif
         
-        for pairedDevice in pairedDevices {
-            let pairedDevice = pairedDevice as! IOBluetoothDevice
+        // Add cooldown check to prevent excessive polling
+        let now = Date()
+        if now.timeIntervalSince(lastDeviceCheckTime) < deviceCheckCooldown {
+            #if DEBUG
+            print("[BT]: Device check on cooldown, skipping")
+            #endif
+            return false
+        }
+        lastDeviceCheckTime = now
+        
+        // Filter to connected devices - simplified approach to avoid race conditions
+        let connectedDevices = pairedDevices.compactMap { device -> IOBluetoothDevice? in
+            guard let btDevice = device as? IOBluetoothDevice,
+                  btDevice.addressString != nil else { return nil }
             
-            // Skip devices without valid addresses to avoid CoreBluetooth errors
-            guard pairedDevice.addressString != nil else {
+            // Direct connection check - this is the safest approach
+            // The previous timeout logic was causing race conditions
+            return btDevice.isConnected() ? btDevice : nil
+        }
+        
+        NSLog("[NoQCNoLife-BT]: Found \(connectedDevices.count) connected devices")
+        #if DEBUG
+        print("[BT]: Found \(connectedDevices.count) connected devices")
+        #endif
+        
+        // Now check only connected devices for Bose products
+        for pairedDevice in connectedDevices {
+            NSLog("[NoQCNoLife-BT]: Checking connected device: \(pairedDevice.name ?? "Unknown")")
+            #if DEBUG
+            print("[BT]: Checking connected device: \(pairedDevice.name ?? "Unknown")")
+            #endif
+            
+            // Get PnP info directly - timeout was causing issues
+            let pnpInfo = processPnPInfomation(pairedDevice)
+            
+            guard let info = pnpInfo else {
                 #if DEBUG
-                print("[BT]: Skipping device with no address")
+                print("[BT]:   - No PnP info available or timeout")
                 #endif
                 continue
             }
             
-            NSLog("[NoQCNoLife-BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
             #if DEBUG
-            print("[BT]: Checking device: \(pairedDevice.name ?? "Unknown")")
+            print("[BT]:   - Vendor ID: \(info.venderId), Product ID: \(info.productId)")
             #endif
             
-            if (!pairedDevice.isConnected()) {
-                NSLog("[NoQCNoLife-BT]:   - Device not connected")
-                #if DEBUG
-                print("[BT]:   - Not connected")
-                #endif
-                continue
-            }
-            
-            #if DEBUG
-            print("[BT]:   - Is connected, checking PnP info")
-            #endif
-            
-            guard let pnpInfo = processPnPInfomation(pairedDevice) else {
-                #if DEBUG
-                print("[BT]:   - No PnP info available")
-                #endif
-                continue
-            }
-            
-            #if DEBUG
-            print("[BT]:   - Vendor ID: \(pnpInfo.venderId), Product ID: \(pnpInfo.productId)")
-            #endif
-            
-            if (Bose.isSupportedBoseProduct(venderId: pnpInfo.venderId, productId: pnpInfo.productId)) {
+            if (Bose.isSupportedBoseProduct(venderId: info.venderId, productId: info.productId)) {
                 #if DEBUG
                 print("[BT]:   - This is a supported Bose product!")
                 #endif
                 connectedDevice = pairedDevice
-                productId = pnpInfo.productId
+                productId = info.productId
                 return true
             } else {
                 #if DEBUG
@@ -381,7 +400,12 @@ class Bt {
         
         #if DEBUG
         print("[BT]: Opening RFCOMM connection to: \(connectedDevice.name ?? "Unknown")")
+        print("[BT]: Device connection state: \(connectedDevice.isConnected())")
         #endif
+        
+        
+        // Add a small delay to allow any previous connections to fully close
+        usleep(100000) // Wait 100ms
         
         var rfcommChannelId: BluetoothRFCOMMChannelID = 0
         
@@ -404,14 +428,68 @@ class Bt {
         print("[BT]: Got RFCOMM channel ID: \(rfcommChannelId)")
         #endif
         
+        // Try the sync version first - it seems more reliable even with errors
         let result = connectedDevice.openRFCOMMChannelSync(&rfcommChannel,
                                                   withChannelID: rfcommChannelId,
                                                   delegate: self)
         if (result != kIOReturnSuccess) {
             #if DEBUG
-            print("[BT]: ERROR - Failed to open RFCOMM channel, result: \(result)")
+            print("[BT]: Sync RFCOMM channel open returned error: \(result)")
             #endif
-            return false
+            
+            // Even if the sync call fails, the channel might still be created
+            // Check if we have a valid channel anyway
+            if rfcommChannel == nil {
+                #if DEBUG
+                print("[BT]: No channel created, trying async as fallback")
+                #endif
+                
+                // Try async as a fallback
+                let asyncResult = connectedDevice.openRFCOMMChannelAsync(&rfcommChannel,
+                                                                         withChannelID: rfcommChannelId,
+                                                                         delegate: self)
+                if asyncResult == kIOReturnSuccess {
+                    #if DEBUG
+                    print("[BT]: Async RFCOMM channel open initiated successfully")
+                    #endif
+                    
+                    // Set up a fallback timer in case rfcommChannelOpenComplete is never called
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                        guard let self = self else { return }
+                        
+                        #if DEBUG
+                        print("[BT]: Fallback timer fired - checking if BMAP version was sent")
+                        #endif
+                        
+                        // If we still haven't sent the BMAP version packet after 3 seconds,
+                        // try to send it anyway as a fallback
+                        if !self.bmapVersionRequested, let channel = self.connectionState.channel {
+                            #if DEBUG
+                            print("[BT]: rfcommChannelOpenComplete never called, attempting fallback BMAP version send")
+                            print("[BT]: Channel state - exists: true, isOpen: \(channel.isOpen())")
+                            #endif
+                            
+                            // Force send the BMAP version packet
+                            self.sendBmapVersionPacket()
+                        }
+                    }
+                    
+                    return true
+                } else {
+                    #if DEBUG
+                    print("[BT]: ERROR - Both sync and async RFCOMM channel open failed")
+                    #endif
+                    return false
+                }
+            } else {
+                #if DEBUG
+                print("[BT]: Sync call failed but channel was created, proceeding")
+                #endif
+            }
+        } else {
+            #if DEBUG
+            print("[BT]: Sync RFCOMM channel open succeeded")
+            #endif
         }
         
         #if DEBUG
@@ -426,6 +504,35 @@ class Bt {
         #if DEBUG
         print("[BT]: After setDelegate - delegate set")
         #endif
+        
+        // Manually send BMAP version packet since rfcommChannelOpenComplete might not be called
+        // if the channel opened synchronously
+        if rfcommChannel.isOpen() && !bmapVersionRequested {
+            #if DEBUG
+            print("[BT]: Channel is already open, sending BMAP version packet immediately")
+            #endif
+            sendBmapVersionPacket()
+        } else if !bmapVersionRequested {
+            #if DEBUG
+            print("[BT]: Channel not yet open (isOpen=\(rfcommChannel.isOpen())), setting up delayed send")
+            #endif
+            
+            // Set up a delayed attempt to send the BMAP version packet
+            // This covers cases where the channel reports as closed but might work anyway
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self = self, !self.bmapVersionRequested else { return }
+                
+                #if DEBUG
+                print("[BT]: Delayed BMAP version send attempt")
+                if let channel = self.connectionState.channel {
+                    print("[BT]: Channel state after delay: isOpen=\(channel.isOpen()), MTU=\(channel.getMTU())")
+                }
+                #endif
+                
+                // Try sending even if the channel reports as closed
+                self.sendBmapVersionPacket()
+            }
+        }
         
         return true
     }
@@ -532,6 +639,100 @@ class Bt {
         }
         return sendPacketSync(packet)
     }
+    
+    func sendRemoveDevicePacket(macAddress: [UInt8]) -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateRemoveDevicePacket(macAddress: macAddress) else {
+            os_log("Failed to generate remove device packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendEnterPairingModePacket() -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateEnterPairingModePacket() else {
+            os_log("Failed to generate enter pairing mode packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendExitPairingModePacket() -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateExitPairingModePacket() else {
+            os_log("Failed to generate exit pairing mode packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendDeviceInfoPacket(macAddress: [UInt8]) -> Bool {
+        guard let packet = DeviceManagementFunctionBlock.generateDeviceInfoPacket(macAddress: macAddress) else {
+            os_log("Failed to generate device info packet.", type: .error)
+            return false
+        }
+        return sendPacketSync(packet)
+    }
+    
+    func sendRawPacket(_ packet: [Int8]) -> Bool {
+        return sendPacketSync(packet)
+    }
+    
+    private func sendBmapVersionPacket() {
+        bmapVersionRequested = true
+        
+        guard let packet = Bose.generateGetBmapVersionPacket() else {
+            #if DEBUG
+            print("[BT]: ERROR - Failed to generate BMAP version packet")
+            #endif
+            closeConnection()
+            delegate.bmapVersionEvent(nil)
+            return
+        }
+        
+        #if DEBUG
+        print("[BT]: Sending BMAP version packet: \(packet)")
+        if let channel = connectionState.channel {
+            print("[BT]: Channel state: isOpen = \(channel.isOpen()), MTU = \(channel.getMTU())")
+        }
+        #endif
+        
+        // Try to send the packet - this might work even if the channel reports as closed
+        let sendResult = sendPacketSync(packet)
+        
+        #if DEBUG
+        print("[BT]: BMAP version packet send result: \(sendResult)")
+        #endif
+        
+        if !sendResult {
+            #if DEBUG
+            print("[BT]: First attempt to send BMAP version packet failed, trying one more time after delay")
+            #endif
+            
+            // Sometimes the channel needs a moment, try once more after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self = self else { return }
+                
+                #if DEBUG
+                print("[BT]: Retrying BMAP version packet send")
+                #endif
+                
+                if !self.sendPacketSync(packet) {
+                    #if DEBUG
+                    print("[BT]: ERROR - Failed to send BMAP version packet after retry")
+                    #endif
+                    self.closeConnection()
+                    self.delegate.bmapVersionEvent(nil)
+                } else {
+                    #if DEBUG
+                    print("[BT]: Successfully sent BMAP version packet on retry")
+                    #endif
+                }
+            }
+        } else {
+            #if DEBUG
+            print("[BT]: Successfully sent BMAP version packet")
+            #endif
+        }
+    }
 }
 
 extension Bt: IOBluetoothRFCOMMChannelDelegate {
@@ -628,35 +829,12 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
             #endif
             return
         }
-        bmapVersionRequested = true
         
         // [重要] BmapVersionを取得しないと、一切データを送ってこない。
-        guard let packet = Bose.generateGetBmapVersionPacket() else {
-            // assert(false, "Failed to generate getBmapVersionPacket @ Bt::rfcommChannelOpenComplete()")
-            os_log("Failed to generate getBmapVersionPacket.", type: .error)
-            #if DEBUG
-            print("[BT]: ERROR - Failed to generate BMAP version packet")
-            #endif
-            self.closeConnection()
-            self.delegate.bmapVersionEvent(nil)
-            return
-        }
-        
         #if DEBUG
-        print("[BT]: Sending BMAP version packet: \(packet)")
+        print("[BT]: Channel opened, sending BMAP version packet via callback")
         #endif
-        
-        if (self.sendPacketSync(packet) == false) {
-            #if DEBUG
-            print("[BT]: ERROR - Failed to send BMAP version packet")
-            #endif
-            self.closeConnection()
-            self.delegate.bmapVersionEvent(nil)
-        } else {
-            #if DEBUG
-            print("[BT]: Successfully sent BMAP version packet")
-            #endif
-        }
+        sendBmapVersionPacket()
     }
     
     /*func rfcommChannelWriteComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
