@@ -18,6 +18,19 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+enum DeviceConnectionStatus {
+    case connected
+    case disconnected
+    case currentDevice
+}
+
+struct BosePairedDevice {
+    let name: String?
+    let address: String
+    let status: DeviceConnectionStatus
+    var deviceInfo: String? // Additional info from DEVICE_INFO command
+}
+
 protocol EventHandler {
     func bmapVersionEvent(_ version: String?)
     func batteryLevelStatus(_ level: Int?)
@@ -26,5 +39,14 @@ protocol EventHandler {
 }
 
 protocol DeviceManagementEventHandler: EventHandler {
-    func onDeviceListReceived(_ devices: [BoseConnectedDevice])
+    func onDeviceListReceived(_ devices: [BosePairedDevice])
+    func onDeviceInfoReceived(_ deviceInfo: DeviceInfo)
+}
+
+struct DeviceInfo {
+    let macAddress: String
+    let isConnected: Bool
+    let isLocalDevice: Bool
+    let isBoseProduct: Bool
+    let deviceName: String?
 }
