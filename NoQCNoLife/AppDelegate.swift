@@ -78,7 +78,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-extension AppDelegate: BluetoothDelegate {
+extension AppDelegate: BluetoothDelegate, DeviceManagementEventHandler {
     
     func onConnect() {
         NSLog("[NoQCNoLife]: onConnect() called")
@@ -193,6 +193,18 @@ extension AppDelegate: BluetoothDelegate {
             }
         }
     }
+    
+    // MARK: - DeviceManagementEventHandler
+    
+    func onDeviceListReceived(_ devices: [BosePairedDevice]) {
+        // Forward the device list to the connections window if it's open
+        ConnectionsWindowController.shared.didReceiveDeviceList(devices)
+    }
+    
+    func onDeviceInfoReceived(_ deviceInfo: DeviceInfo) {
+        // Forward the device info to the connections window if it's open
+        ConnectionsWindowController.shared.onDeviceInfoReceived(deviceInfo)
+    }
 }
 
 extension AppDelegate: StatusItemDelegate {
@@ -212,6 +224,23 @@ extension AppDelegate: StatusItemDelegate {
         print("[AppDelegate]: Current product ID: \(self.bt.getProductId() ?? 0)")
         #endif
         
+        // Check for Option key and add debug menu item
+        let optionKeyPressed = NSEvent.modifierFlags.contains(.option)
+        
+        // Remove existing debug menu item if it exists
+        if let existingDebugItem = menu.items.first(where: { $0.identifier?.rawValue == "debug" }) {
+            menu.removeItem(existingDebugItem)
+        }
+        
+        // Add debug menu item if Option is pressed
+        if optionKeyPressed {
+            let debugMenuItem = NSMenuItem(title: "Debug Console...", action: #selector(openDebugConsole), keyEquivalent: "")
+            debugMenuItem.target = self
+            debugMenuItem.identifier = NSUserInterfaceItemIdentifier("debug")
+            menu.insertItem(debugMenuItem, at: 0)
+            menu.insertItem(NSMenuItem.separator(), at: 1)
+        }
+        
         // If we have a product ID but the UI doesn't show it, update the UI
         if let productId = self.bt.getProductId(), productId > 0 {
             if !self.statusItem.isConnected() {
@@ -222,13 +251,19 @@ extension AppDelegate: StatusItemDelegate {
             }
         }
         
-        // Always try to check for connected devices when menu opens
-        self.bt.checkForConnectedDevices()
-        
-        // Update menu items after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.updateMenuItems(menu)
+        // Check for connected devices asynchronously to avoid blocking the menu
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.bt.checkForConnectedDevices()
+            
+            // Update menu items on main thread after device check
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.updateMenuItems(menu)
+            }
         }
+    }
+    
+    @objc private func openDebugConsole() {
+        DebugWindowController.shared.showWindow()
     }
     
     private func updateMenuItems(_ menu: NSMenu) {

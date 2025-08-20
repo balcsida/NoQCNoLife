@@ -33,6 +33,7 @@ class StatusItem {
         BATTERY_LEVEL,
         DEVICE_NAME,
         NOISE_CANCEL_MODE,
+        CONNECTIONS,
         QUIT
     }
     
@@ -50,6 +51,8 @@ class StatusItem {
         mainMenu.delegate = delegate
 //        mainMenu.addItem(NSMenuItem.separator())
         mainMenu.addItem(DeviceNameMenuItem.init())
+        mainMenu.addItem(NSMenuItem.separator())
+        mainMenu.addItem(ConnectionsMenuItem.init(delegate: delegate))
         mainMenu.addItem(NSMenuItem.separator())
         mainMenu.addItem(AboutMenuItem.init())
         mainMenu.addItem(QuitMenuItem.init())
@@ -108,6 +111,7 @@ class StatusItem {
         for menuItem in self.statusItem.menu?.items ?? [] {
             if (menuItem.tag != MenuItemTags.ABOUT.rawValue &&
                 menuItem.tag != MenuItemTags.DEVICE_NAME.rawValue &&
+                menuItem.tag != MenuItemTags.CONNECTIONS.rawValue &&
                 menuItem.tag != MenuItemTags.QUIT.rawValue &&
                 !menuItem.isSeparatorItem) {
                 menuItem.menu?.removeItem(menuItem)
@@ -200,7 +204,7 @@ protocol StatusItemDelegate : NSMenuDelegate {
 
 class AboutMenuItem : NSMenuItem {
     init() {
-        super.init(title: "About No QC, No Life", action: #selector(self.openAboutPanel(_:)), keyEquivalent: "")
+        super.init(title: "About", action: #selector(self.openAboutPanel(_:)), keyEquivalent: "")
         self.tag = StatusItem.MenuItemTags.ABOUT.rawValue
         self.target = self
     }
@@ -396,6 +400,26 @@ class NoiseCancelModeMenuItem : NSMenuItem {
                 }
             }
         }
+    }
+}
+
+class ConnectionsMenuItem : NSMenuItem {
+    
+    weak var delegate: StatusItemDelegate?
+    
+    init(delegate: StatusItemDelegate) {
+        self.delegate = delegate
+        super.init(title: "Connections...", action: #selector(self.showConnectionsWindow(_:)), keyEquivalent: "")
+        self.tag = StatusItem.MenuItemTags.CONNECTIONS.rawValue
+        self.target = self
+    }
+    
+    required init(coder decoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc func showConnectionsWindow(_ sender: NSMenuItem) {
+        ConnectionsWindowController.shared.showWindow()
     }
 }
 

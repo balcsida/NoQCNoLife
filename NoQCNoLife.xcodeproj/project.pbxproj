@@ -26,6 +26,8 @@
 		847A521C25804B34002DEF2D /* ProductInfoFunctionBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847A521625804B34002DEF2D /* ProductInfoFunctionBlock.swift */; };
 		84896F3D269BBE9D00B62D1A /* PreferenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84896F3C269BBE9D00B62D1A /* PreferenceManager.swift */; };
 		E811D27F2E4B7050002AC4F3 /* SFSafeSymbols in Frameworks */ = {isa = PBXBuildFile; productRef = E811D27E2E4B7050002AC4F3 /* SFSafeSymbols */; };
+		74003EF7EC4E4C1FBFA34C89 /* ConnectionsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6959C0180ACA457DBC737737 /* ConnectionsWindowController.swift */; };
+		59259B534542494DBF3AB6CA /* DebugWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AEF1C8E3724EEFB01F4ABA /* DebugWindowController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +52,8 @@
 		847A521525804B34002DEF2D /* StatusFunctionBlock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusFunctionBlock.swift; sourceTree = "<group>"; };
 		847A521625804B34002DEF2D /* ProductInfoFunctionBlock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductInfoFunctionBlock.swift; sourceTree = "<group>"; };
 		84896F3C269BBE9D00B62D1A /* PreferenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceManager.swift; sourceTree = "<group>"; };
+		6959C0180ACA457DBC737737 /* ConnectionsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsWindowController.swift; sourceTree = "<group>"; };
+		35AEF1C8E3724EEFB01F4ABA /* DebugWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +94,8 @@
 				847A51FD25804998002DEF2D /* Bt.swift */,
 				84896F3C269BBE9D00B62D1A /* PreferenceManager.swift */,
 				847A51FE25804998002DEF2D /* StatusItem.swift */,
+				6959C0180ACA457DBC737737 /* ConnectionsWindowController.swift */,
+				35AEF1C8E3724EEFB01F4ABA /* DebugWindowController.swift */,
 				847A521E2580517D002DEF2D /* bose */,
 				847A51EC25804723002DEF2D /* Assets.xcassets */,
 				847A51EE25804723002DEF2D /* MainMenu.xib */,
@@ -203,6 +209,8 @@
 				847A520E25804ACF002DEF2D /* EventHandler.swift in Sources */,
 				847A521725804B34002DEF2D /* DeviceManagementFunctionBlock.swift in Sources */,
 				847A520225804998002DEF2D /* StatusItem.swift in Sources */,
+				74003EF7EC4E4C1FBFA34C89 /* ConnectionsWindowController.swift in Sources */,
+				59259B534542494DBF3AB6CA /* DebugWindowController.swift in Sources */,
 				847A521B25804B34002DEF2D /* StatusFunctionBlock.swift in Sources */,
 				847A521C25804B34002DEF2D /* ProductInfoFunctionBlock.swift in Sources */,
 				847A520D25804ACF002DEF2D /* BmapPacket.swift in Sources */,
