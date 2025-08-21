@@ -1,0 +1,111 @@
+/*
+ Copyright (C) 2025 NoQCNoLife Contributors
+ 
+ This file is part of 'No QC, No Life'.
+ 
+ 'No QC, No Life' is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 1, or (at your option)
+ any later version.
+ 
+ 'No QC, No Life' is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+import SwiftUI
+import Combine
+
+@available(macOS 11.0, *)
+class AppState: ObservableObject {
+    @Published var isConnected: Bool = false
+    @Published var connectedProduct: Bose.Products?
+    @Published var batteryLevel: Int?
+    @Published var noiseCancelMode: Bose.AnrMode?
+    @Published var bassControlStep: Int?
+    
+    weak var delegate: AppStateDelegate?
+    
+    var supportsNoiseCancellation: Bool {
+        guard let product = connectedProduct else { return false }
+        switch product {
+        case .WOLFCASTLE, .BAYWOLF:
+            return true
+        case .KLEOS:
+            return false
+        }
+    }
+    
+    var supportsBassControl: Bool {
+        guard let product = connectedProduct else { return false }
+        switch product {
+        case .KLEOS:
+            return true
+        case .WOLFCASTLE, .BAYWOLF:
+            return false
+        }
+    }
+    
+    func connected(to product: Bose.Products) {
+        DispatchQueue.main.async {
+            self.isConnected = true
+            self.connectedProduct = product
+        }
+    }
+    
+    func disconnected() {
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.connectedProduct = nil
+            self.batteryLevel = nil
+            self.noiseCancelMode = nil
+            self.bassControlStep = nil
+        }
+    }
+    
+    func setBatteryLevel(_ level: Int?) {
+        DispatchQueue.main.async {
+            self.batteryLevel = level
+        }
+    }
+    
+    func setNoiseCancelMode(_ mode: Bose.AnrMode?) {
+        DispatchQueue.main.async {
+            self.noiseCancelMode = mode
+        }
+        
+        if let mode = mode {
+            delegate?.noiseCancelModeSelected(mode)
+        }
+    }
+    
+    func setBassControlStep(_ step: Int?) {
+        DispatchQueue.main.async {
+            self.bassControlStep = step
+        }
+        
+        if let step = step {
+            delegate?.bassControlStepSelected(step)
+        }
+    }
+    
+    static var preview: AppState {
+        let state = AppState()
+        state.isConnected = true
+        state.connectedProduct = .BAYWOLF
+        state.batteryLevel = 85
+        state.noiseCancelMode = .HIGH
+        state.bassControlStep = 2
+        return state
+    }
+}
+
+protocol AppStateDelegate: AnyObject {
+    func noiseCancelModeSelected(_ mode: Bose.AnrMode)
+    func bassControlStepSelected(_ step: Int)
+}

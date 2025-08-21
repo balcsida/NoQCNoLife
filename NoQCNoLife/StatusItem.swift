@@ -54,6 +54,13 @@ class StatusItem {
         mainMenu.addItem(NSMenuItem.separator())
         mainMenu.addItem(ConnectionsMenuItem.init(delegate: delegate))
         mainMenu.addItem(NSMenuItem.separator())
+        
+        // Add UI toggle menu item for macOS 11.0+
+        if #available(macOS 11.0, *) {
+            mainMenu.addItem(UIToggleMenuItem.init())
+            mainMenu.addItem(NSMenuItem.separator())
+        }
+        
         mainMenu.addItem(AboutMenuItem.init())
         mainMenu.addItem(QuitMenuItem.init())
 
@@ -420,6 +427,45 @@ class ConnectionsMenuItem : NSMenuItem {
     
     @objc func showConnectionsWindow(_ sender: NSMenuItem) {
         ConnectionsWindowController.shared.showWindow()
+    }
+}
+
+@available(macOS 11.0, *)
+class UIToggleMenuItem : NSMenuItem {
+    init() {
+        let useSwiftUI = UserDefaults.standard.bool(forKey: "useSwiftUI")
+        let title = useSwiftUI ? "Switch to Classic UI" : "Switch to SwiftUI"
+        super.init(title: title, action: #selector(self.toggleUI(_:)), keyEquivalent: "")
+        self.target = self
+    }
+    
+    required init(coder decoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc func toggleUI(_ sender: NSMenuItem) {
+        let currentUseSwiftUI = UserDefaults.standard.bool(forKey: "useSwiftUI")
+        UserDefaults.standard.set(!currentUseSwiftUI, forKey: "useSwiftUI")
+        
+        let alert = NSAlert()
+        alert.messageText = "UI Changed"
+        alert.informativeText = "Please restart the application for the UI change to take effect."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Restart Now")
+        alert.addButton(withTitle: "Restart Later")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            // Restart the application
+            let url = URL(fileURLWithPath: Bundle.main.resourcePath!)
+            let path = url.deletingLastPathComponent().deletingLastPathComponent().absoluteString
+            let task = Process()
+            task.launchPath = "/usr/bin/open"
+            task.arguments = [path]
+            task.launch()
+            
+            exit(0)
+        }
     }
 }
 
