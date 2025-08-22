@@ -21,108 +21,170 @@
 import Cocoa
 import SwiftUI
 import IOBluetooth
-import SFSafeSymbols
 
 @main
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     
     var statusItem: NSStatusItem!
-    var popover: NSPopover!
-    var swiftUIDelegate: SwiftUIAppDelegate!
+    var menu: NSMenu!
+    var appState = AppState()
+    var bt: Bt!
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        // Write debug log
-        let logPath = "/tmp/noqcnolife_launch.txt"
-        try? "AppDelegate launched at \(Date())\n".write(toFile: logPath, atomically: true, encoding: .utf8)
+        NSLog("[NoQCNoLife] Application starting...")
         
-        // Set as menu bar app - this must be done before creating status item
-        NSApp.setActivationPolicy(.accessory)
+        // Create the menu bar icon FIRST
+        createStatusBarItem()
         
-        // Create status item with explicit length
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        // Initialize Bluetooth
+        bt = Bt(self)
         
-        if let button = statusItem.button {
-            // Set both image and alternate image for better visibility
-            let icon = NSImage(systemSymbol: .waveformCircle, accessibilityDescription: "NoQCNoLife")
-            icon.size = NSSize(width: 18, height: 18)
-            icon.isTemplate = true  // This makes the icon adapt to light/dark mode
-            
-            button.image = icon
-            button.action = #selector(statusBarButtonClicked(_:))
-            button.target = self
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            
-            // Add tooltip for better user experience
-            button.toolTip = "NoQCNoLife - Click to open"
-            
-            let existingLog = (try? String(contentsOfFile: logPath, encoding: .utf8)) ?? ""
-            try? (existingLog + "Status bar created with image\n").write(toFile: logPath, atomically: false, encoding: .utf8)
-        }
-        
-        // Force the status item to be visible
-        statusItem.isVisible = true
-        
-        // Initialize SwiftUI delegate
-        swiftUIDelegate = SwiftUIAppDelegate()
-        swiftUIDelegate.statusItem = statusItem  // Pass the status item
-        swiftUIDelegate.applicationDidFinishLaunching(aNotification)
+        NSLog("[NoQCNoLife] Application initialization complete")
     }
     
-    @objc func statusBarButtonClicked(_ sender: AnyObject?) {
-        if swiftUIDelegate.popover == nil {
-            swiftUIDelegate.setupPopover()
+    func createStatusBarItem() {
+        // Create status item
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        
+        // Set up the button
+        if let button = statusItem.button {
+            button.title = "QC"
+            button.toolTip = "NoQCNoLife - Bose QC Controller"
+            NSLog("[NoQCNoLife] Menu bar button created with title 'QC'")
         }
-        swiftUIDelegate.togglePopover(sender)
+        
+        // Create menu
+        menu = NSMenu()
+        
+        // Add menu items
+        menu.addItem(NSMenuItem(title: "Connect to Device", action: #selector(connectDevice), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+        
+        let ncMenu = NSMenu()
+        ncMenu.addItem(NSMenuItem(title: "High", action: #selector(setNCHigh), keyEquivalent: ""))
+        ncMenu.addItem(NSMenuItem(title: "Low", action: #selector(setNCLow), keyEquivalent: ""))
+        ncMenu.addItem(NSMenuItem(title: "Off", action: #selector(setNCOff), keyEquivalent: ""))
+        
+        let ncItem = NSMenuItem(title: "Noise Cancellation", action: nil, keyEquivalent: "")
+        ncItem.submenu = ncMenu
+        menu.addItem(ncItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Debug Window", action: #selector(showDebugWindow), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Connections", action: #selector(showConnections), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        
+        // Assign menu to status item
+        statusItem.menu = menu
+        
+        NSLog("[NoQCNoLife] Menu bar setup complete")
+    }
+    
+    @objc func connectDevice() {
+        NSLog("[NoQCNoLife] Connect device requested")
+        bt?.checkForConnectedDevices()
+    }
+    
+    @objc func setNCHigh() {
+        NSLog("[NoQCNoLife] Setting NC to High")
+        _ = bt?.sendSetGetAnrModePacket(.HIGH)
+    }
+    
+    @objc func setNCLow() {
+        NSLog("[NoQCNoLife] Setting NC to Low")
+        _ = bt?.sendSetGetAnrModePacket(.LOW)
+    }
+    
+    @objc func setNCOff() {
+        NSLog("[NoQCNoLife] Setting NC to Off")
+        _ = bt?.sendSetGetAnrModePacket(.OFF)
+    }
+    
+    @objc func showDebugWindow() {
+        DebugWindowController.shared.showWindow()
+    }
+    
+    @objc func showConnections() {
+        ConnectionsWindowController.shared.showWindow()
+    }
+    
+    func updateMenuBarIcon(for mode: Bose.AnrMode?) {
+        guard let button = statusItem.button else { return }
+        
+        // Update the title based on NC mode
+        switch mode {
+        case .HIGH: button.title = "QC-H"
+        case .LOW: button.title = "QC-L"
+        case .OFF: button.title = "QC-O"
+        case .WIND: button.title = "QC-W"
+        case nil: button.title = "QC"
+        }
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
-        swiftUIDelegate?.applicationWillTerminate(aNotification)
+        bt?.closeConnection()
     }
 }
 
-// Extension to make AppDelegate conform to the protocols needed by Bt
+// MARK: - BluetoothDelegate, DeviceManagementEventHandler
 extension AppDelegate: BluetoothDelegate, DeviceManagementEventHandler {
     
     nonisolated func onConnect() {
         Task { @MainActor in
-            swiftUIDelegate?.onConnect()
+            NSLog("[NoQCNoLife] Device connected")
+            appState.isConnected = true
+            
+            // Request initial status
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                _ = self?.bt.sendGetBatteryLevelPacket()
+                _ = self?.bt.sendGetAnrModePacket()
+            }
         }
     }
     
     nonisolated func onDisconnect() {
         Task { @MainActor in
-            swiftUIDelegate?.onDisconnect()
+            NSLog("[NoQCNoLife] Device disconnected")
+            appState.isConnected = false
+            updateMenuBarIcon(for: nil)
         }
     }
     
     nonisolated func bassControlStepChanged(_ step: Int?) {
         Task { @MainActor in
-            swiftUIDelegate?.bassControlStepChanged(step)
+            NSLog("[NoQCNoLife] Bass control: \(step?.description ?? "nil")")
+            appState.bassControlStep = step
         }
     }
     
     nonisolated func batteryLevelStatus(_ level: Int?) {
         Task { @MainActor in
-            swiftUIDelegate?.batteryLevelStatus(level)
+            NSLog("[NoQCNoLife] Battery level: \(level?.description ?? "nil")%")
+            appState.batteryLevel = level
         }
     }
     
     nonisolated func noiseCancelModeChanged(_ mode: Bose.AnrMode?) {
         Task { @MainActor in
-            swiftUIDelegate?.noiseCancelModeChanged(mode)
+            NSLog("[NoQCNoLife] NC mode: \(mode?.toString() ?? "nil")")
+            appState.noiseCancelMode = mode
+            updateMenuBarIcon(for: mode)
         }
     }
     
     nonisolated func onDeviceListReceived(_ devices: [BosePairedDevice]) {
         Task { @MainActor in
-            swiftUIDelegate?.onDeviceListReceived(devices)
+            NSLog("[NoQCNoLife] Received \(devices.count) paired devices")
+            ConnectionsManager.shared.didReceiveDeviceList(devices)
         }
     }
     
     nonisolated func onDeviceInfoReceived(_ deviceInfo: DeviceInfo) {
         Task { @MainActor in
-            swiftUIDelegate?.onDeviceInfoReceived(deviceInfo)
+            NSLog("[NoQCNoLife] Device info received for \(deviceInfo.macAddress)")
+            ConnectionsManager.shared.onDeviceInfoReceived(deviceInfo)
         }
     }
 }
