@@ -21,15 +21,13 @@
 import SwiftUI
 import Combine
 
-@available(macOS 11.0, *)
+@MainActor
 class AppState: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var connectedProduct: Bose.Products?
     @Published var batteryLevel: Int?
     @Published var noiseCancelMode: Bose.AnrMode?
     @Published var bassControlStep: Int?
-    
-    weak var delegate: AppStateDelegate?
     
     var supportsNoiseCancellation: Bool {
         guard let product = connectedProduct else { return false }
@@ -68,44 +66,22 @@ class AppState: ObservableObject {
         }
     }
     
-    func setBatteryLevel(_ level: Int?) {
+    // These methods only update the UI state, they don't trigger commands
+    func updateBatteryLevel(_ level: Int?) {
         DispatchQueue.main.async {
             self.batteryLevel = level
         }
     }
     
-    func setNoiseCancelMode(_ mode: Bose.AnrMode?) {
+    func updateNoiseCancelMode(_ mode: Bose.AnrMode?) {
         DispatchQueue.main.async {
             self.noiseCancelMode = mode
         }
-        
-        if let mode = mode {
-            delegate?.noiseCancelModeSelected(mode)
-        }
     }
     
-    func setBassControlStep(_ step: Int?) {
+    func updateBassControlStep(_ step: Int?) {
         DispatchQueue.main.async {
             self.bassControlStep = step
         }
-        
-        if let step = step {
-            delegate?.bassControlStepSelected(step)
-        }
     }
-    
-    static var preview: AppState {
-        let state = AppState()
-        state.isConnected = true
-        state.connectedProduct = .BAYWOLF
-        state.batteryLevel = 85
-        state.noiseCancelMode = .HIGH
-        state.bassControlStep = 2
-        return state
-    }
-}
-
-protocol AppStateDelegate: AnyObject {
-    func noiseCancelModeSelected(_ mode: Bose.AnrMode)
-    func bassControlStepSelected(_ step: Int)
 }

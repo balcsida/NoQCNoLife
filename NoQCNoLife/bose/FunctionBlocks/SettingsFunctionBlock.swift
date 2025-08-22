@@ -66,7 +66,7 @@ class SettingsFunctionBlock : FunctionBlock {
         return MultiPointFunction.generateSetGetMultiPointPacket()
     }*/
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
         case FunctionIds.ANR.rawValue:
             AnrModeFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
@@ -80,7 +80,6 @@ class SettingsFunctionBlock : FunctionBlock {
             print("Not implemented func: \(String(describing: bmapPacket.getFunctionId())) @ SettingsFunctionBlock")
             print(bmapPacket.toString())
             #endif
-        }
     }
 }
 
@@ -108,7 +107,7 @@ private class AnrModeFunction: Function {
                           payload: [anrMode.rawValue])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
             assert(false, "Invalid operator.")
             os_log("Invalid anr mode packet.", type: .error)
@@ -161,7 +160,7 @@ private class BassControlFunction: Function {
                           payload: [Int8(step)])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
             assert(false, "Invalid operator.")
             os_log("Invalid bass control packet.", type: .error)
@@ -208,7 +207,8 @@ private class BassControlFunction: Function {
                           payload: [0])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("MultiPointFunction::parsePacket()")
     }
 }*/ // MultiPointFunction
+}

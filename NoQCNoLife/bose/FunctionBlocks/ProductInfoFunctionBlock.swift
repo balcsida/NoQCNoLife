@@ -60,7 +60,7 @@ class ProductInfoFunctionBlock: FunctionBlock {
         return BmapVersionFunction.generateGetBmapVersionPacket()
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         guard let functionId = bmapPacket.getFunctionId() else {
             assert(false, "Invalid function id @ ProductInfoFunctionBlock::parsePacket")
             os_log("Invalid productInfo function block packet.", type: .error)
@@ -95,11 +95,12 @@ private class BmapVersionFunction : Function {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0) {
             assert(false, "Invalid payload @ BmapVersionFunction::parsePacket()")
             os_log("Invalid bmap version packet.", type: .error)
+            // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.bmapVersionEvent(nil)
             return
         }
@@ -112,6 +113,7 @@ private class BmapVersionFunction : Function {
             versionStr.append(String(scaler))
         }
         
+        // Since eventHandler is likely MainActor-isolated already, just call directly
         eventHandler.bmapVersionEvent(versionStr)
     }
 }
@@ -130,7 +132,7 @@ private class BmapVersionFunction : Function {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         var versionStr = ""
         for data in bmapPacket.getPayload() ?? [] {
             guard let scaler = UnicodeScalar(Int(UInt8(bitPattern: data))) else {

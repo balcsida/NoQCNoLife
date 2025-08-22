@@ -42,7 +42,7 @@ class DeviceManagementFunctionBlock: FunctionBlock {
     
     static let id = BmapPacket.FunctionBlockIds.DEVICE_MANAGEMENT
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
         case ConnectFunction.id:
             ConnectFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
@@ -150,7 +150,7 @@ private class ConnectFunction : Function {
     
     static let id: Int8 = 1
 
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
 //        print("[ConnectEvent]")
     }
 }
@@ -160,7 +160,7 @@ private class DisconnectFunction: Function {
     
     static let id: Int8 = 2
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
 //        print("[DisconnectEvent]")
     }
 }
@@ -169,7 +169,7 @@ private class RemoveDeviceFunction: Function {
     
     static let id: Int8 = 3
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[RemoveDeviceEvent]: Device removal response received")
     }
 }
@@ -178,7 +178,7 @@ private class ListDevicesFunction: Function {
     
     static let id: Int8 = 4
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         // According to BMAP docs, LIST_DEVICES response has operator STATUS (3)
         if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.STATUS {
             guard let payload = bmapPacket.getPayload(), payload.count > 0 else {
@@ -280,14 +280,16 @@ private class PairingModeFunction: Function {
     
     static let id: Int8 = 8
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[PairingModeEvent]: Pairing mode response received")
         
         // Check if this is an error response (operator ERROR = 4)
         if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.ERROR {
             print("[PairingModeEvent]: Pairing mode command failed (likely due to max connections)")
             // Notify that pairing mode is disabled (failed to enable)
-            ConnectionsWindowController.shared.onPairingModeResponse(false)
+            Task { @MainActor in
+                ConnectionsWindowController.shared.onPairingModeResponse(false)
+            }
             return
         }
         
@@ -296,7 +298,9 @@ private class PairingModeFunction: Function {
             print("[PairingModeEvent]: Pairing mode is now \(pairingModeEnabled ? "enabled" : "disabled")")
             
             // Notify the connections window about the pairing mode state
-            ConnectionsWindowController.shared.onPairingModeResponse(pairingModeEnabled)
+            Task { @MainActor in
+                ConnectionsWindowController.shared.onPairingModeResponse(pairingModeEnabled)
+            }
         }
     }
 }
@@ -305,7 +309,7 @@ private class InfoFunction: Function {
     
     static let id: Int8 = 5
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[DeviceInfoEvent]: Device info response received")
         
         guard let payload = bmapPacket.getPayload(), payload.count >= 7 else {

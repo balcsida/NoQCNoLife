@@ -18,13 +18,13 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-enum DeviceConnectionStatus {
+enum DeviceConnectionStatus: Hashable {
     case connected
     case disconnected
     case currentDevice
 }
 
-struct BosePairedDevice {
+struct BosePairedDevice: Hashable {
     let name: String?
     let address: String
     let status: DeviceConnectionStatus

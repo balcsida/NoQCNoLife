@@ -30,7 +30,9 @@ This is an unofficial project; we have not obtained permission from any of the r
 
 ## System Requirements
 
-macOS 10.13 (High Sierra) or later.
+macOS 11.0 (Big Sur) or later.
+
+**Note:** The app has been migrated to SwiftUI, requiring macOS 11.0 or later for the modern user interface.
 
 ## Installation
 
@@ -42,6 +44,22 @@ brew install --cask noqcnolife
 
 ### Option 2: Direct Download
 Download the **.dmg** from the [latest release](https://github.com/balcsida/NoQCNoLife/releases/latest).
+
+## Building from Source
+
+### Requirements
+- Xcode 15.0 or later
+- Swift 6.1.2 or later
+- macOS 11.0 SDK or later
+
+### Build Instructions
+1. Clone the repository
+2. Open `NoQCNoLife.xcodeproj` in Xcode
+3. Update Build Settings:
+   - Swift Language Version: Set to "Swift 6" 
+   - macOS Deployment Target: 11.0 or later
+4. Clean Build Folder (Shift+Cmd+K)
+5. Build and run (Cmd+R)
 
 ## Credits
 

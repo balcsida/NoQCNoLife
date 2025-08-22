@@ -48,7 +48,7 @@ class AudioManagementFunctionBlock: FunctionBlock {
         return NowPlayingFunction.generateStartNowPlayingPacket()
     }*/
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
 //        case FunctionIds.GET_ALL.rawValue:
 //            GetAllFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
@@ -86,7 +86,7 @@ class AudioManagementFunctionBlock: FunctionBlock {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("SourceFunction::parsePacket()")
         print(bmapPacket.toString())
         
@@ -135,7 +135,7 @@ class AudioManagementFunctionBlock: FunctionBlock {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("AudioManagementFunctionBlock::GetAllFunction()")
         print(bmapPacket.toString())
     }
@@ -146,7 +146,7 @@ private class StatusFunction: Function {
     private static let FUNCTION_BLOCK_ID = AudioManagementFunctionBlock.ID
     private static let FUNCTION_ID = AudioManagementFunctionBlock.FunctionIds.STATUS
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch(bmapPacket.getOperatorId()) {
         case nil:
             print("Invalid operator")
@@ -178,7 +178,7 @@ private class VolumeFunction: Function {
     private static let FUNCTION_BLOCK_ID = AudioManagementFunctionBlock.ID
     private static let FUNCTION_ID = AudioManagementFunctionBlock.FunctionIds.VOLUME
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
             assert(false, "Invalid operator @  VolumeFunction::parsePacket()")
             return;
@@ -212,7 +212,7 @@ private class NowPlayingFunction: Function {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         #if DEBUG
         print("NowPlayingFunction::parsePacket()")
         print(bmapPacket.toString())
