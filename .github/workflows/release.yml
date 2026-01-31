@@ -96,7 +96,7 @@ jobs:
             
             #### Option 2: Homebrew
             ```bash
-            brew tap balcsida/tap
+            brew tap balcsida/noqcnolife https://github.com/balcsida/NoQCNoLife
             brew install --cask noqcnolife
             ```
             
@@ -116,63 +116,39 @@ jobs:
             NoQCNoLife-${{ steps.get_version.outputs.VERSION }}.dmg
             checksums.txt
           
-      - name: Update Homebrew Tap
-        continue-on-error: true
+      - name: Update Homebrew Cask
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Try to update the Homebrew tap
-          # This requires a Fine-grained Personal Access Token
-          # Add it as HOMEBREW_TAP_TOKEN secret in repository settings
-          
-          if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
-            echo "::warning title=Homebrew Tap Update::HOMEBREW_TAP_TOKEN secret not set. Manual update required."
-            echo "To enable automatic updates:"
-            echo "1. Create a Fine-grained Personal Access Token:"
-            echo "   - Go to GitHub Settings → Developer settings → Fine-grained tokens"
-            echo "   - Select only 'balcsida/homebrew-tap' repository"
-            echo "   - Grant 'Contents: Read and Write' permission"
-            echo "2. Add it as HOMEBREW_TAP_TOKEN secret in repository settings"
-            echo ""
-            echo "Manual update command:"
-            echo "./scripts/update-homebrew-tap.sh ${{ steps.get_version.outputs.VERSION }} ${{ steps.checksums.outputs.SHA256 }}"
-            exit 0
-          fi
-          
-          # Clone the tap repository using token
-          git clone https://${HOMEBREW_TAP_TOKEN}@github.com/balcsida/homebrew-tap.git tap-repo
-          cd tap-repo
-          
-          # Configure git
+          # Update the Homebrew cask in this repository
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Update the formula
-          cat > Casks/noqcnolife.rb << EOF
+
+          # Update the cask file
+          cat > Casks/noqcnolife.rb << 'EOF'
           cask "noqcnolife" do
             version "${{ steps.get_version.outputs.VERSION }}"
             sha256 "${{ steps.checksums.outputs.SHA256 }}"
-          
+
             url "https://github.com/balcsida/NoQCNoLife/releases/download/v#{version}/NoQCNoLife-#{version}.dmg"
             name "No QC, No Life"
             desc "Control Bose QuietComfort headphones from macOS"
             homepage "https://github.com/balcsida/NoQCNoLife"
-          
+
             auto_updates false
-            depends_on macos: ">= :high_sierra"
-          
+
             app "NoQCNoLife.app"
-          
+
             uninstall quit: "io.github.balcsida.NoQCNoLife"
-          
+
             zap trash: [
               "~/Library/Preferences/io.github.balcsida.NoQCNoLife.plist",
               "~/Library/Application Support/NoQCNoLife",
             ]
           end
           EOF
-          
-          # Commit and push
+
+          # Commit and push to the default branch
           git add Casks/noqcnolife.rb
-          git commit -m "Update NoQCNoLife to v${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
-          git push || echo "Push failed - manual update required"
+          git commit -m "Update Homebrew cask to v${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin HEAD:master || echo "Push failed - manual update may be required"
