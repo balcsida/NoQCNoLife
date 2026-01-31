@@ -38,7 +38,7 @@ macOS 11.0 (Big Sur) or later.
 
 ### Option 1: Homebrew (Recommended)
 ```bash
-brew tap balcsida/tap
+brew tap balcsida/noqcnolife https://github.com/balcsida/NoQCNoLife
 brew install --cask noqcnolife
 ```
 
