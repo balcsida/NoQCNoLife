@@ -125,7 +125,8 @@ private struct ControlButtonsView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var alertTitle = ""
-    
+    @State private var showingRemoveConfirmation = false
+
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 10) {
@@ -133,31 +134,31 @@ private struct ControlButtonsView: View {
                     connectToDevice()
                 }
                 .disabled(!canConnect)
-                
+
                 Button("Disconnect") {
                     disconnectFromDevice()
                 }
                 .disabled(!canDisconnect)
-                
+
                 Button("Remove Pairing") {
-                    removePairing()
+                    showingRemoveConfirmation = true
                 }
                 .disabled(!canRemovePairing)
-                
+
                 Spacer()
-                
+
                 Button("Refresh") {
                     if let bt = BluetoothManager.shared.bt {
                         manager.refreshDevices(using: bt)
                     }
                 }
             }
-            
+
             Button(manager.isPairingModeActive ? "Exit Pairing Mode" : "Enter Pairing Mode") {
                 togglePairingMode()
             }
             .disabled(!canTogglePairingMode)
-            
+
             Text("Select a device to connect or disconnect")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -167,6 +168,20 @@ private struct ControlButtonsView: View {
             Button("OK") { }
         } message: {
             Text(alertMessage)
+        }
+        .confirmationDialog(
+            "Remove Device Pairing",
+            isPresented: $showingRemoveConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                removePairing()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            if let device = selectedDevice {
+                Text("Are you sure you want to remove the pairing for \"\(device.displayName)\"?\n\nThis will permanently delete the device from the Bose headphone's paired device list.")
+            }
         }
     }
     

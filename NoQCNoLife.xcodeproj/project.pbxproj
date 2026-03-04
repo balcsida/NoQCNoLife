@@ -31,6 +31,8 @@
 		E874ADDB2E5772EC00787372 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E874ADD32E5772EC00787372 /* AppState.swift */; };
 		E874ADDC2E5772EC00787372 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E874ADD22E5772EC00787372 /* AppDelegate.swift */; };
 		E874ADDD2E5772EC00787372 /* MainContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E874ADD62E5772EC00787372 /* MainContentView.swift */; };
+		E8AC23B72F4475F900BF4339 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E8AC23B62F4475F900BF4339 /* Info.plist */; };
+		E8AC23B92F4476CE00BF4339 /* Info 2.plist in Resources */ = {isa = PBXBuildFile; fileRef = E8AC23B82F4476CE00BF4339 /* Info 2.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +62,8 @@
 		E874ADD52E5772EC00787372 /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConnectionsView.swift; path = NoQCNoLife/ConnectionsView.swift; sourceTree = "<group>"; };
 		E874ADD62E5772EC00787372 /* MainContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MainContentView.swift; path = NoQCNoLife/MainContentView.swift; sourceTree = "<group>"; };
 		E874ADD72E5772EC00787372 /* NoQCNoLifeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NoQCNoLifeApp.swift; path = NoQCNoLife/NoQCNoLifeApp.swift; sourceTree = "<group>"; };
+		E8AC23B62F4475F900BF4339 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E8AC23B82F4476CE00BF4339 /* Info 2.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info 2.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +125,8 @@
 				847A521625804B34002DEF2D /* ProductInfoFunctionBlock.swift */,
 				847A521425804B34002DEF2D /* SettingsFunctionBlock.swift */,
 				847A521525804B34002DEF2D /* StatusFunctionBlock.swift */,
+				E8AC23B62F4475F900BF4339 /* Info.plist */,
+				E8AC23B82F4476CE00BF4339 /* Info 2.plist */,
 			);
 			path = FunctionBlocks;
 			sourceTree = "<group>";
@@ -202,6 +208,8 @@
 				847A51FA25804931002DEF2D /* LICENSE in Resources */,
 				847A51ED25804723002DEF2D /* Assets.xcassets in Resources */,
 				847A51FB25804931002DEF2D /* README.md in Resources */,
+				E8AC23B72F4475F900BF4339 /* Info.plist in Resources */,
+				E8AC23B92F4476CE00BF4339 /* Info 2.plist in Resources */,
 				847A51FC25804932002DEF2D /* Credits.rtf in Resources */,
 			);
 		};
