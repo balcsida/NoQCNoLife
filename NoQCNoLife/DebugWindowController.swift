@@ -38,18 +38,6 @@ struct DebugView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Debug Log")
-                    .font(.headline)
-                Spacer()
-                Button("Clear") {
-                    logger.clearLogs()
-                }
-            }
-            .padding()
-            
-            Divider()
-            
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
@@ -76,6 +64,16 @@ struct DebugView: View {
                     }
                 }
             }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Clear") {
+                    logger.clearLogs()
+                }
+            }
+            .padding(8)
         }
         .frame(width: 800, height: 600)
     }
