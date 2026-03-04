@@ -19,6 +19,7 @@
  */
 
 import IOBluetooth
+import os.log
 
 class DeviceManagementFunctionBlock: FunctionBlock {
     
@@ -57,7 +58,7 @@ class DeviceManagementFunctionBlock: FunctionBlock {
         case InfoFunction.id:
             InfoFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
+            os_log("Invalid function id in device management packet.", type: .error)
         default:
             print("Not implemented func: \(bmapPacket.getFunctionId()!) @ DeviceManagementFunctionBlock")
             print(bmapPacket.toString())
@@ -311,7 +312,17 @@ private class InfoFunction: Function {
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[DeviceInfoEvent]: Device info response received")
-        
+
+        // Handle ERROR responses: [error_code] [mac_6_bytes]
+        if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.ERROR {
+            if let payload = bmapPacket.getPayload(), payload.count >= 7 {
+                let macAddress = Array(payload[1..<7])
+                let macString = macAddress.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: ":")
+                print("[DeviceInfoEvent]: ERROR for device \(macString), code: \(payload[0])")
+            }
+            return
+        }
+
         guard let payload = bmapPacket.getPayload(), payload.count >= 7 else {
             print("[DeviceInfoEvent]: Invalid payload length")
             return
@@ -333,20 +344,17 @@ private class InfoFunction: Function {
         print("[DeviceInfoEvent]: Bose Product: \(isBoseProduct)")
         
         // Extract device name if available
+        // From Bose Connect APK: bytes 7-8 are product ID for all devices.
+        // Bose products have an additional variant byte at 9, so name starts at 10.
+        // Non-Bose devices: name starts at byte 9.
         var deviceName: String? = nil
-        if payload.count > 7 {
-            // Skip product info if it exists (varies by device type)
-            var nameOffset = 7
-            if isBoseProduct && payload.count > 8 {
-                // Bose products may have additional product info
-                nameOffset = 8
-            }
-            
-            if nameOffset < payload.count {
-                let nameBytes = Array(payload[nameOffset...])
-                deviceName = String(bytes: nameBytes.map { UInt8(bitPattern: $0) }, encoding: .utf8)
-                print("[DeviceInfoEvent]: Device Name: \(deviceName ?? "Unknown")")
-            }
+        let nameOffset = isBoseProduct ? 10 : 9
+
+        if nameOffset < payload.count {
+            let nameBytes = Array(payload[nameOffset...])
+            deviceName = String(bytes: nameBytes.map { UInt8(bitPattern: $0) }, encoding: .utf8)?
+                .trimmingCharacters(in: .controlCharacters)
+            print("[DeviceInfoEvent]: Device Name: \(deviceName ?? "Unknown")")
         }
         
         // Send the device info to the event handler

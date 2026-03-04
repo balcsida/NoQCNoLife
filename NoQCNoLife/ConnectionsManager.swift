@@ -73,27 +73,18 @@ final class ConnectionsManager: ObservableObject {
         }
     }
     
+    /// Removes a device pairing. Caller is responsible for showing confirmation UI first.
     func removeDevicePairing(_ device: BosePairedDevice, using bt: Bt, completion: @escaping (Result<Void, Error>) -> Void) {
-        let alert = NSAlert()
-        alert.messageText = "Remove Device Pairing"
-        alert.informativeText = "Are you sure you want to remove the pairing for \"\(device.displayName)\"?\n\nThis will permanently delete the device from the Bose headphone's paired device list."
-        alert.alertStyle = .critical
-        alert.addButton(withTitle: "Remove")
-        alert.addButton(withTitle: "Cancel")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            let macAddressBytes = parseMacAddress(device.address)
-            let success = bt.sendRemoveDevicePacket(macAddress: macAddressBytes)
-            
-            if success {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.refreshDevices(using: bt)
-                }
-                completion(.success(()))
-            } else {
-                completion(.failure(ConnectionError.sendFailed))
+        let macAddressBytes = parseMacAddress(device.address)
+        let success = bt.sendRemoveDevicePacket(macAddress: macAddressBytes)
+
+        if success {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.refreshDevices(using: bt)
             }
+            completion(.success(()))
+        } else {
+            completion(.failure(ConnectionError.sendFailed))
         }
     }
     
@@ -118,44 +109,43 @@ final class ConnectionsManager: ObservableObject {
     }
     
     func didReceiveDeviceList(_ devices: [BosePairedDevice]) {
-        DispatchQueue.main.async {
-            self.devices = devices
-            self.connectedDeviceCount = devices.filter { device in
-                device.status == .connected || device.status == .currentDevice
-            }.count
-            self.isLoading = false
+        self.devices = devices
+        self.connectedDeviceCount = devices.filter { device in
+            device.status == .connected || device.status == .currentDevice
+        }.count
+        self.isLoading = false
+
+        // Query INFO for each device to get names and connection status
+        guard let bt = BluetoothManager.shared.bt else { return }
+        for device in devices {
+            let macBytes = parseMacAddress(device.address)
+            _ = bt.sendDeviceInfoPacket(macAddress: macBytes)
         }
     }
-    
+
     func onPairingModeResponse(_ isEnabled: Bool) {
-        DispatchQueue.main.async {
-            self.isPairingModeActive = isEnabled
-        }
+        self.isPairingModeActive = isEnabled
     }
-    
+
     func onDeviceInfoReceived(_ deviceInfo: DeviceInfo) {
-        DispatchQueue.main.async {
-            for i in 0..<self.devices.count {
-                if self.devices[i].address.uppercased() == deviceInfo.macAddress.uppercased() {
-                    let status: DeviceConnectionStatus = deviceInfo.isLocalDevice ? .currentDevice :
-                                                        (deviceInfo.isConnected ? .connected : .disconnected)
-                    
-                    let updatedDevice = BosePairedDevice(
-                        name: deviceInfo.deviceName ?? self.devices[i].name,
-                        address: self.devices[i].address,
-                        status: status,
-                        deviceInfo: self.devices[i].deviceInfo
-                    )
-                    
-                    self.devices[i] = updatedDevice
-                    break
-                }
+        for i in 0..<devices.count {
+            if devices[i].address.uppercased() == deviceInfo.macAddress.uppercased() {
+                let status: DeviceConnectionStatus = deviceInfo.isLocalDevice ? .currentDevice :
+                                                    (deviceInfo.isConnected ? .connected : .disconnected)
+
+                devices[i] = BosePairedDevice(
+                    name: deviceInfo.deviceName ?? devices[i].name,
+                    address: devices[i].address,
+                    status: status,
+                    deviceInfo: devices[i].deviceInfo
+                )
+                break
             }
-            
-            self.connectedDeviceCount = self.devices.filter { device in
-                device.status == .connected || device.status == .currentDevice
-            }.count
         }
+
+        connectedDeviceCount = devices.filter { device in
+            device.status == .connected || device.status == .currentDevice
+        }.count
     }
 }
 
