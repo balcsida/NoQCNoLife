@@ -19,6 +19,7 @@
  */
 
 import os.log
+import Foundation
 
 class StatusFunctionBlock: FunctionBlock {
     /*
@@ -38,12 +39,11 @@ class StatusFunctionBlock: FunctionBlock {
         return BatteryLevelFunction.generateGetBatteryLevelPacket()
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
         case FunctionIds.BATTERY_LEVEL.rawValue:
             BatteryLevelFunction.parsePacket(bmapPacket:bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
             os_log("Invalid status function block packet.", type: .error)
         default:
             #if DEBUG
@@ -68,22 +68,24 @@ private class BatteryLevelFunction: Function {
                           payload: [])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
-            assert(false, "Invalid operator.")
             os_log("Invalid battery level packet.", type: .error)
+            // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.batteryLevelStatus(nil)
             return;
         }
         
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0) {
-            assert(false, "Invalid payload.")
             os_log("Invalid battery level packet.", type: .error)
+            // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.batteryLevelStatus(nil)
             return
         }
         
-        eventHandler.batteryLevelStatus(Int(UInt8(bitPattern: payload[0])))
+        let level = Int(UInt8(bitPattern: payload[0]))
+        // Since eventHandler is likely MainActor-isolated already, just call directly
+        eventHandler.batteryLevelStatus(level)
     }
 } // BatteryLevelFunction

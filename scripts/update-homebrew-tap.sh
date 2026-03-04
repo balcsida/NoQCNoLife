@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to update the Homebrew tap repository after a release
+# Script to update the Homebrew cask after a release
 # Usage: ./scripts/update-homebrew-tap.sh <version> <sha256>
 
 set -e
@@ -13,19 +13,20 @@ fi
 
 VERSION=$1
 SHA256=$2
-TAP_DIR="../homebrew-tap"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+CASK_FILE="$REPO_ROOT/Casks/noqcnolife.rb"
 
-echo "Updating Homebrew tap for NoQCNoLife v${VERSION}..."
+echo "Updating Homebrew cask for NoQCNoLife v${VERSION}..."
 
-# Check if tap repository exists
-if [ ! -d "$TAP_DIR" ]; then
-    echo "Error: Homebrew tap repository not found at $TAP_DIR"
-    echo "Please run ./scripts/setup-homebrew-tap.sh first"
+# Check if Casks directory exists
+if [ ! -d "$REPO_ROOT/Casks" ]; then
+    echo "Error: Casks directory not found at $REPO_ROOT/Casks"
     exit 1
 fi
 
-# Create the updated formula
-cat > "$TAP_DIR/Casks/noqcnolife.rb" << EOF
+# Create the updated cask
+cat > "$CASK_FILE" << EOF
 cask "noqcnolife" do
   version "${VERSION}"
   sha256 "${SHA256}"
@@ -36,7 +37,6 @@ cask "noqcnolife" do
   homepage "https://github.com/balcsida/NoQCNoLife"
 
   auto_updates false
-  depends_on macos: ">= :high_sierra"
 
   app "NoQCNoLife.app"
 
@@ -49,15 +49,14 @@ cask "noqcnolife" do
 end
 EOF
 
-# Commit and push
-cd "$TAP_DIR"
-git add Casks/noqcnolife.rb
-git commit -m "Update NoQCNoLife to v${VERSION}"
-git push
-
 echo ""
-echo "✅ Homebrew tap updated successfully!"
+echo "Homebrew cask updated at $CASK_FILE"
 echo ""
-echo "Users can now update with:"
+echo "To commit the changes:"
+echo "  git add Casks/noqcnolife.rb"
+echo "  git commit -m \"Update Homebrew cask to v${VERSION}\""
+echo "  git push"
+echo ""
+echo "Users can then update with:"
 echo "  brew update"
 echo "  brew upgrade --cask noqcnolife"

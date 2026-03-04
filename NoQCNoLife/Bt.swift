@@ -18,11 +18,12 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-import IOBluetooth
+@preconcurrency import IOBluetooth
+import Foundation
 import os.log
 
 // Thread-safe wrapper for channel and device state
-private class ConnectionState {
+private final class ConnectionState: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.noqcnolife.connectionState", attributes: .concurrent)
     private var _channel: IOBluetoothRFCOMMChannel?
     private var _device: IOBluetoothDevice?
@@ -93,14 +94,25 @@ private class ConnectionState {
     }
 }
 
-class Bt {
+final class Bt: @unchecked Sendable {
 
     private let connectionState = ConnectionState()
-    private var delegate: BluetoothDelegate
+    private let delegate: BluetoothDelegate
+    private let stateLock = NSLock()
     private var disconnectBtUserNotification: IOBluetoothUserNotification?
-    private var bmapVersionRequested = false
-    private var lastDeviceCheckTime: Date = Date.distantPast
+    private var _bmapVersionRequested = false
+    private var _lastDeviceCheckTime: Date = Date.distantPast
     private let deviceCheckCooldown: TimeInterval = 0.5 // Minimum 500ms between checks
+    
+    private var bmapVersionRequested: Bool {
+        get { stateLock.withLock { _bmapVersionRequested } }
+        set { stateLock.withLock { _bmapVersionRequested = newValue } }
+    }
+    
+    private var lastDeviceCheckTime: Date {
+        get { stateLock.withLock { _lastDeviceCheckTime } }
+        set { stateLock.withLock { _lastDeviceCheckTime = newValue } }
+    }
     
     init(_ delegate: BluetoothDelegate) {
         self.delegate = delegate
@@ -193,6 +205,9 @@ class Bt {
             #if DEBUG
             print("[BT]: Successfully opened RFCOMM channel")
             #endif
+            let deviceName = device.name ?? "Unknown"
+            let pid = productId ?? 0
+            Task { @MainActor in DebugLogger.shared.addLog("[BT] Connected to \(deviceName) (product ID: \(pid))") }
             
             // Unregister any existing disconnect notification to prevent duplicates
             self.disconnectBtUserNotification?.unregister()
@@ -306,6 +321,10 @@ class Bt {
     
     func getProductId() -> Int? {
         return connectionState.productId
+    }
+    
+    func getConnectedDevice() -> IOBluetoothDevice? {
+        return connectionState.device
     }
     
     @objc func onDisconnectDetected() {
@@ -590,13 +609,15 @@ class Bt {
     
     private func sendPacketSync(_ packet: [Int8]) -> Bool {
         let result = connectionState.sendPacket(packet)
-        
+
         if (result == nil || result != kIOReturnSuccess) {
             return false
         }
         #if DEBUG
         print("[Sent]: \(packet)")
         #endif
+        let hex = packet.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: " ")
+        Task { @MainActor in DebugLogger.shared.addLog("[TX] \(hex)") }
         return true
     }
     
@@ -742,6 +763,7 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         #if DEBUG
         print("[BT]: rfcommChannelClosed")
         #endif
+        Task { @MainActor in DebugLogger.shared.addLog("[BT] RFCOMM channel closed") }
         
         // Reset connection state
         connectionState.reset()
@@ -780,6 +802,8 @@ extension Bt: IOBluetoothRFCOMMChannelDelegate {
         #if DEBUG
         print("[Received]: \(array) (length: \(dataLength))")
         #endif
+        let hex = array.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: " ")
+        Task { @MainActor in DebugLogger.shared.addLog("[RX] \(hex)") }
         
         // Process multiple packets that might be in the same transmission
         var offset = 0

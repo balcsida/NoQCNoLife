@@ -19,7 +19,7 @@
  */
 
 protocol FunctionBlock {
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler)
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler)
 }
 
 class FunctionBlockFactory {
@@ -46,5 +46,5 @@ class FunctionBlockFactory {
 }
 
 protocol Function {
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler)
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler)
 }

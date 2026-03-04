@@ -66,21 +66,20 @@ class SettingsFunctionBlock : FunctionBlock {
         return MultiPointFunction.generateSetGetMultiPointPacket()
     }*/
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
         case FunctionIds.ANR.rawValue:
             AnrModeFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case FunctionIds.BASS_CONTROL.rawValue:
             BassControlFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
+            os_log("Unexpected nil function id in settings packet.", type: .error)
             os_log("Invalid settings function block packet.", type: .error)
         default:
             #if DEBUG
             print("Not implemented func: \(String(describing: bmapPacket.getFunctionId())) @ SettingsFunctionBlock")
             print(bmapPacket.toString())
             #endif
-        }
     }
 }
 
@@ -108,27 +107,24 @@ private class AnrModeFunction: Function {
                           payload: [anrMode.rawValue])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
-            assert(false, "Invalid operator.")
-            os_log("Invalid anr mode packet.", type: .error)
+            os_log("Unexpected operator in ANR mode packet: %d", type: .error, bmapPacket.getOperatorId()?.rawValue ?? -1)
             eventHandler.noiseCancelModeChanged(nil)
             return
         }
-        
+
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0) {
-            assert(false, "Invalid payload.")
-            os_log("Invalid anr mode packet.", type: .error)
+            os_log("Empty or nil payload in ANR mode packet.", type: .error)
             eventHandler.noiseCancelModeChanged(nil)
             return
         }
-        
+
         // TODO Implement supportedAnrMode
         let currentAnrModeVal = payload[0]
         guard let anrMode = Bose.AnrMode(rawValue: currentAnrModeVal) else {
-            assert(false, "Unknown anr mode: \(currentAnrModeVal)")
-            os_log("Invalid anr mode packet.", type: .error)
+            os_log("Unknown ANR mode value: %d", type: .error, currentAnrModeVal)
             eventHandler.noiseCancelModeChanged(nil)
             return
         }
@@ -161,18 +157,16 @@ private class BassControlFunction: Function {
                           payload: [Int8(step)])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
-            assert(false, "Invalid operator.")
-            os_log("Invalid bass control packet.", type: .error)
+            os_log("Unexpected operator in bass control packet: %d", type: .error, bmapPacket.getOperatorId()?.rawValue ?? -1)
             eventHandler.bassControlStepChanged(nil)
             return
         }
-        
+
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0 || payload.count != 3) {
-            assert(false, "Invalid payload.")
-            os_log("Invalid bass control packet.", type: .error)
+            os_log("Invalid bass control payload (count: %d, expected 3).", type: .error, payload?.count ?? 0)
             eventHandler.bassControlStepChanged(nil)
             return
         }
@@ -208,7 +202,8 @@ private class BassControlFunction: Function {
                           payload: [0])
     }
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("MultiPointFunction::parsePacket()")
     }
 }*/ // MultiPointFunction
+}

@@ -107,6 +107,14 @@ class Bose {
             }
         }
         
+        func supportedAnrModes() -> [Bose.AnrMode] {
+            switch self {
+            case .WOLFCASTLE: return [.OFF, .HIGH, .LOW]
+            case .BAYWOLF:    return [.OFF, .HIGH, .LOW]
+            case .KLEOS:      return []
+            }
+        }
+
         func getName() -> String {
             switch self {
 //            case .ISAAC: return "Bose AE2 SoundLink"

@@ -19,6 +19,7 @@
  */
 
 import IOBluetooth
+import os.log
 
 class DeviceManagementFunctionBlock: FunctionBlock {
     
@@ -42,7 +43,7 @@ class DeviceManagementFunctionBlock: FunctionBlock {
     
     static let id = BmapPacket.FunctionBlockIds.DEVICE_MANAGEMENT
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         switch bmapPacket.getFunctionId() {
         case ConnectFunction.id:
             ConnectFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
@@ -57,7 +58,7 @@ class DeviceManagementFunctionBlock: FunctionBlock {
         case InfoFunction.id:
             InfoFunction.parsePacket(bmapPacket: bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
+            os_log("Invalid function id in device management packet.", type: .error)
         default:
             print("Not implemented func: \(bmapPacket.getFunctionId()!) @ DeviceManagementFunctionBlock")
             print(bmapPacket.toString())
@@ -150,7 +151,7 @@ private class ConnectFunction : Function {
     
     static let id: Int8 = 1
 
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
 //        print("[ConnectEvent]")
     }
 }
@@ -160,7 +161,7 @@ private class DisconnectFunction: Function {
     
     static let id: Int8 = 2
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
 //        print("[DisconnectEvent]")
     }
 }
@@ -169,7 +170,7 @@ private class RemoveDeviceFunction: Function {
     
     static let id: Int8 = 3
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[RemoveDeviceEvent]: Device removal response received")
     }
 }
@@ -178,7 +179,7 @@ private class ListDevicesFunction: Function {
     
     static let id: Int8 = 4
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         // According to BMAP docs, LIST_DEVICES response has operator STATUS (3)
         if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.STATUS {
             guard let payload = bmapPacket.getPayload(), payload.count > 0 else {
@@ -280,14 +281,16 @@ private class PairingModeFunction: Function {
     
     static let id: Int8 = 8
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[PairingModeEvent]: Pairing mode response received")
         
         // Check if this is an error response (operator ERROR = 4)
         if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.ERROR {
             print("[PairingModeEvent]: Pairing mode command failed (likely due to max connections)")
             // Notify that pairing mode is disabled (failed to enable)
-            ConnectionsWindowController.shared.onPairingModeResponse(false)
+            Task { @MainActor in
+                ConnectionsWindowController.shared.onPairingModeResponse(false)
+            }
             return
         }
         
@@ -296,7 +299,9 @@ private class PairingModeFunction: Function {
             print("[PairingModeEvent]: Pairing mode is now \(pairingModeEnabled ? "enabled" : "disabled")")
             
             // Notify the connections window about the pairing mode state
-            ConnectionsWindowController.shared.onPairingModeResponse(pairingModeEnabled)
+            Task { @MainActor in
+                ConnectionsWindowController.shared.onPairingModeResponse(pairingModeEnabled)
+            }
         }
     }
 }
@@ -305,9 +310,19 @@ private class InfoFunction: Function {
     
     static let id: Int8 = 5
     
-    static func parsePacket(bmapPacket: BmapPacket, eventHandler: EventHandler) {
+    static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         print("[DeviceInfoEvent]: Device info response received")
-        
+
+        // Handle ERROR responses: [error_code] [mac_6_bytes]
+        if bmapPacket.getOperatorId() == BmapPacket.OperatorIds.ERROR {
+            if let payload = bmapPacket.getPayload(), payload.count >= 7 {
+                let macAddress = Array(payload[1..<7])
+                let macString = macAddress.map { String(format: "%02X", UInt8(bitPattern: $0)) }.joined(separator: ":")
+                print("[DeviceInfoEvent]: ERROR for device \(macString), code: \(payload[0])")
+            }
+            return
+        }
+
         guard let payload = bmapPacket.getPayload(), payload.count >= 7 else {
             print("[DeviceInfoEvent]: Invalid payload length")
             return
@@ -329,20 +344,17 @@ private class InfoFunction: Function {
         print("[DeviceInfoEvent]: Bose Product: \(isBoseProduct)")
         
         // Extract device name if available
+        // From Bose Connect APK: bytes 7-8 are product ID for all devices.
+        // Bose products have an additional variant byte at 9, so name starts at 10.
+        // Non-Bose devices: name starts at byte 9.
         var deviceName: String? = nil
-        if payload.count > 7 {
-            // Skip product info if it exists (varies by device type)
-            var nameOffset = 7
-            if isBoseProduct && payload.count > 8 {
-                // Bose products may have additional product info
-                nameOffset = 8
-            }
-            
-            if nameOffset < payload.count {
-                let nameBytes = Array(payload[nameOffset...])
-                deviceName = String(bytes: nameBytes.map { UInt8(bitPattern: $0) }, encoding: .utf8)
-                print("[DeviceInfoEvent]: Device Name: \(deviceName ?? "Unknown")")
-            }
+        let nameOffset = isBoseProduct ? 10 : 9
+
+        if nameOffset < payload.count {
+            let nameBytes = Array(payload[nameOffset...])
+            deviceName = String(bytes: nameBytes.map { UInt8(bitPattern: $0) }, encoding: .utf8)?
+                .trimmingCharacters(in: .controlCharacters)
+            print("[DeviceInfoEvent]: Device Name: \(deviceName ?? "Unknown")")
         }
         
         // Send the device info to the event handler

@@ -1,9 +1,13 @@
 # No QC, No Life
 
-![Screenshot when QuietComfort 35 II is connected](https://github.com/user-attachments/assets/d0f9c1ae-5379-41c8-b9e3-d3423c211c2a "Screenshot when QuietComfort 35 II is connected")
-
-This application lets you control the **Bose QuietComfort 35** from macOS.  
+This application lets you control the **Bose QuietComfort 35** from macOS.
 It lives in your menu bar and allows you to check the battery level and adjust the noise cancellation level.
+
+## Screenshots
+
+| Menu Bar Popover | Device Connections | Debug Log |
+|:---:|:---:|:---:|
+| ![Menu bar popover](screenshots/popover.png) | ![Device connections](screenshots/connections.png) | ![Debug log](screenshots/debug-log.png) |
 
 Originally created by **Shun Ito** (@ll0s0ll) in 2021.
 
@@ -30,18 +34,36 @@ This is an unofficial project; we have not obtained permission from any of the r
 
 ## System Requirements
 
-macOS 10.13 (High Sierra) or later.
+macOS 11.0 (Big Sur) or later.
+
+**Note:** The app has been migrated to SwiftUI, requiring macOS 11.0 or later for the modern user interface.
 
 ## Installation
 
 ### Option 1: Homebrew (Recommended)
 ```bash
-brew tap balcsida/tap
+brew tap balcsida/noqcnolife https://github.com/balcsida/NoQCNoLife
 brew install --cask noqcnolife
 ```
 
 ### Option 2: Direct Download
 Download the **.dmg** from the [latest release](https://github.com/balcsida/NoQCNoLife/releases/latest).
+
+## Building from Source
+
+### Requirements
+- Xcode 15.0 or later
+- Swift 6.1.2 or later
+- macOS 11.0 SDK or later
+
+### Build Instructions
+1. Clone the repository
+2. Open `NoQCNoLife.xcodeproj` in Xcode
+3. Update Build Settings:
+   - Swift Language Version: Set to "Swift 6" 
+   - macOS Deployment Target: 11.0 or later
+4. Clean Build Folder (Shift+Cmd+K)
+5. Build and run (Cmd+R)
 
 ## Credits
 
