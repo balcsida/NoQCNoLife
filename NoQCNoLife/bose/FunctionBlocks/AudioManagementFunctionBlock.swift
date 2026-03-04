@@ -61,7 +61,6 @@ class AudioManagementFunctionBlock: FunctionBlock {
         case FunctionIds.NOW_PLAYING.rawValue:
             NowPlayingFunction.parsePacket(bmapPacket:bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
             os_log("Invalid audio management function block packet.", type: .error)
         default:
             #if DEBUG
@@ -180,12 +179,12 @@ private class VolumeFunction: Function {
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
-            assert(false, "Invalid operator @  VolumeFunction::parsePacket()")
+            os_log("Invalid operator in VolumeFunction packet.", type: .error)
             return;
         }
-        
+
         guard let payload: [Int8] = bmapPacket.getPayload() else {
-            assert(false, "Invalid payload @ VolumeFunction::parsePacket()")
+            os_log("Invalid payload in VolumeFunction packet.", type: .error)
             return
         }
         if (payload.count > 1) {

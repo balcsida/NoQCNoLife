@@ -44,7 +44,6 @@ class StatusFunctionBlock: FunctionBlock {
         case FunctionIds.BATTERY_LEVEL.rawValue:
             BatteryLevelFunction.parsePacket(bmapPacket:bmapPacket, eventHandler: eventHandler)
         case nil:
-            assert(false, "Invalid function id.")
             os_log("Invalid status function block packet.", type: .error)
         default:
             #if DEBUG
@@ -71,7 +70,6 @@ private class BatteryLevelFunction: Function {
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         if (bmapPacket.getOperatorId() != BmapPacket.OperatorIds.STATUS) {
-            assert(false, "Invalid operator.")
             os_log("Invalid battery level packet.", type: .error)
             // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.batteryLevelStatus(nil)
@@ -80,7 +78,6 @@ private class BatteryLevelFunction: Function {
         
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0) {
-            assert(false, "Invalid payload.")
             os_log("Invalid battery level packet.", type: .error)
             // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.batteryLevelStatus(nil)

@@ -62,7 +62,6 @@ class ProductInfoFunctionBlock: FunctionBlock {
     
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         guard let functionId = bmapPacket.getFunctionId() else {
-            assert(false, "Invalid function id @ ProductInfoFunctionBlock::parsePacket")
             os_log("Invalid productInfo function block packet.", type: .error)
             return
         }
@@ -98,7 +97,6 @@ private class BmapVersionFunction : Function {
     static func parsePacket(bmapPacket: BmapPacket, eventHandler: any EventHandler) {
         let payload: [Int8]! = bmapPacket.getPayload()
         if (payload == nil || payload.count == 0) {
-            assert(false, "Invalid payload @ BmapVersionFunction::parsePacket()")
             os_log("Invalid bmap version packet.", type: .error)
             // Since eventHandler is likely MainActor-isolated already, just call directly
             eventHandler.bmapVersionEvent(nil)
