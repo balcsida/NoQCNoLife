@@ -109,7 +109,7 @@ jobs:
             - Bose SoundWear Companion
             
             ### Requirements
-            - macOS 10.13 (High Sierra) or later
+            - macOS 11.0 (Big Sur) or later
             - Bluetooth enabled
             
           files: |
