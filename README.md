@@ -9,7 +9,7 @@ It lives in your menu bar and allows you to check the battery level and adjust t
 |:---:|:---:|:---:|
 | ![Menu bar popover](screenshots/popover.png) | ![Device connections](screenshots/connections.png) | ![Debug log](screenshots/debug-log.png) |
 
-Originally created by **Shun Ito** (@ll0s0ll) in 2021.
+Originally created by **Shun Ito** ([@ll0s0ll](https://github.com/ll0s0ll)) in 2021.
 
 QuietComfort 35 headphones have become indispensable to many users' daily lives.  
 While similar functions exist in the smartphone app, this Mac app provides convenient access to headphone controls directly from the menu bar.
@@ -67,8 +67,8 @@ Download the **.dmg** from the [latest release](https://github.com/balcsida/NoQC
 
 ## Credits
 
-**Original Author:** Shun Ito @ll0s0ll (2020-2021)  
-**Current Maintainer:** Dávid Balatoni @balcsida (2025)
+**Original Author:** Shun Ito [@ll0s0ll](https://github.com/ll0s0ll) (2020-2021)
+**Current Maintainer:** Dávid Balatoni [@balcsida](https://github.com/balcsida) (2025)
 
 ## Disclaimer
 
