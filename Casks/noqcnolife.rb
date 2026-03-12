@@ -11,6 +11,10 @@ cask "noqcnolife" do
 
   app "NoQCNoLife.app"
 
+  postflight do
+    system "xattr", "-cr", "#{appdir}/NoQCNoLife.app"
+  end
+
   uninstall quit: "io.github.balcsida.NoQCNoLife"
 
   zap trash: [
