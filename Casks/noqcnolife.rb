@@ -11,8 +11,8 @@ cask "noqcnolife" do
 
   app "NoQCNoLife.app"
 
-  postflight do
-    system "xattr", "-cr", "#{appdir}/NoQCNoLife.app"
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-cr", "{{appdir}}/NoQCNoLife.app"], must_succeed: false
   end
 
   uninstall quit: "io.github.balcsida.NoQCNoLife"
